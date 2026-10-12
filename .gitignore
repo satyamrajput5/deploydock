@@ -3,3 +3,5 @@ repos/
 *.tfstate
 *.tfstate.*
 deploydock
+*.exe
+api.exe
