@@ -231,6 +231,7 @@
             </div>
           </div>
         </section>
+        <section class="budget-view" id="budget-view" style="display: none;"></section>
       </main>
     </div>
   </div>
@@ -277,6 +278,33 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="auth-modal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title">Sign in to DeployDock</h2>
+      </div>
+      <form id="auth-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="auth-email">Email</label>
+            <input type="email" id="auth-email" class="form-control" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="form-control" placeholder="At least 8 characters" required>
+          </div>
+          <div class="form-error-banner" id="auth-error-banner" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="auth-register-btn">Register</button>
+          <button type="submit" class="btn btn-primary" id="auth-login-btn">
+            <span class="btn-text">Login</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="logs-modal" style="display: none;">
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
@@ -300,6 +328,7 @@
   </div>
 
   <script src="/app.js"></script>
+  <script src="/static/budget.js"></script>
 </body>
 
 </html>

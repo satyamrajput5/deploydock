@@ -744,8 +744,8 @@ canvas {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.822);
+  backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -997,4 +997,69 @@ canvas {
     width: 100%;
     justify-content: space-between;
   }
+}
+
+/* ---------- Budget & Usage page ---------- */
+.budget-view { flex-direction: column; gap: 14px; }
+.bud-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+.bud-title { font-size: 1.15rem; font-weight: 600; }
+.bud-sub { font-size: 0.8rem; color: var(--fg-muted); margin-top: 2px; }
+.bud-tag { font-size: 0.68rem; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--fg-faint); font-weight: 500; }
+.bud-banner { padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; border: 1px solid; }
+.bud-banner.ok { border-color: var(--success); background: rgba(16, 185, 129, 0.08); }
+.bud-banner.warn { border-color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+.bud-banner.bad { border-color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+.bud-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.bud-stat { padding: 14px 16px; }
+.bud-stat-label, .bud-card-title { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-faint); }
+.bud-stat-value { font-size: 1.5rem; font-weight: 600; margin-top: 6px; font-family: var(--font-mono); }
+.bud-stat-value.bad, .bud-row .bad { color: var(--danger); }
+.bud-stat-value.warn { color: var(--warning); }
+.bud-stat-value.ok { color: var(--success); }
+.bud-stat-sub, .bud-note { font-size: 0.75rem; color: var(--fg-muted); margin-top: 4px; }
+.bud-card { padding: 14px 16px; }
+.bud-card-title { margin-bottom: 10px; }
+#bud-services-card .bud-card-title { padding: 14px 16px 6px; }
+.bud-track-wrap { position: relative; padding: 4px 0; }
+.bud-track { position: relative; height: 12px; border-radius: 999px; background: var(--donut-track); overflow: hidden; }
+.bud-fill-proj, .bud-fill { position: absolute; top: 0; bottom: 0; left: 0; }
+.bud-fill-proj { background: repeating-linear-gradient(45deg, rgba(249, 115, 22, 0.4), rgba(249, 115, 22, 0.4) 4px, transparent 4px, transparent 8px); }
+.bud-fill { background: var(--success); }
+.bud-fill.warn { background: var(--warning); }
+.bud-fill.bad { background: var(--danger); }
+.bud-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg-muted); }
+.bud-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 0.75rem; color: var(--fg-muted); }
+.bud-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.bud-legend .dot.solid { background: var(--success); }
+.bud-legend .dot.striped { background: repeating-linear-gradient(45deg, rgba(249, 115, 22, 0.6), rgba(249, 115, 22, 0.6) 2px, transparent 2px, transparent 4px); }
+.bud-legend .dot.line { width: 2px; background: var(--fg-muted); }
+.bud-cols { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+.bud-chart { display: flex; align-items: flex-end; gap: 2px; height: 130px; }
+.bud-bar { flex: 1; background: var(--donut-bar); border-radius: 2px 2px 0 0; }
+.bud-bar.projected { background: transparent; border: 1px dashed var(--fg-faint); border-bottom: none; }
+.bud-axis { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--fg-faint); margin-top: 6px; }
+.bud-row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; padding: 6px 0; }
+.bud-row small { color: var(--fg-faint); }
+.bud-total { border-top: 1px solid var(--border-subtle); margin-top: 8px; font-weight: 600; }
+.bud-mini { height: 4px; background: var(--donut-track); border-radius: 2px; }
+.bud-mini > span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.bud-cat { margin-bottom: 6px; }
+.bud-whatif { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.bud-plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.bud-plan { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--panel-elevated); }
+.bud-plan.in-use { border-color: var(--accent); }
+.bud-plan-name { font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.bud-plan-price { font-size: 1.4rem; font-weight: 600; font-family: var(--font-mono); margin: 6px 0; }
+.bud-plan-price small { font-size: 0.75rem; color: var(--fg-faint); }
+.bud-recs { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--fg-muted); }
+.bud-low { color: var(--warning); }
+.bud-high { color: var(--danger); }
+.bud-settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.bud-check { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--fg-muted); }
+@media (max-width: 900px) {
+  .bud-stats, .bud-plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bud-cols, .bud-settings { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .bud-stats, .bud-plans { grid-template-columns: 1fr; }
 }

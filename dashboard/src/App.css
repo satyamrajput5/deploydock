@@ -1,0 +1,366 @@
+/* plain css, one file. colours are kept close to the excalidraw sketch */
+
+:root {
+  --ink: #222;
+  --muted: #777;
+  --line: #333;
+  --soft-line: #ccc;
+  --bg: #f7f7f5;
+  --card: #fff;
+  --accent: #3b6fd4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  font-size: 15px;
+}
+
+/* ---------- layout ---------- */
+
+.app {
+  max-width: 1200px;
+  margin: 24px auto;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+}
+
+.content {
+  flex: 1;
+  padding: 20px;
+  min-width: 0;
+}
+
+/* ---------- header ---------- */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1.5px solid var(--line);
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.burger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+}
+
+.burger span {
+  width: 22px;
+  height: 2px;
+  background: var(--ink);
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* ---------- sidebar ---------- */
+
+.sidebar {
+  width: 170px;
+  border-right: 1.5px solid var(--line);
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar a {
+  padding: 8px 18px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sidebar a:hover {
+  background: #f0f0ee;
+}
+
+.sidebar a.active {
+  border-left: 3px solid var(--accent);
+  padding-left: 15px;
+  font-weight: 600;
+}
+
+/* ---------- cards ---------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.cards.single {
+  grid-template-columns: minmax(0, 360px);
+}
+
+.card {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-title {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* budget ring */
+.budget-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ring {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+
+.ring-outer {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.ring-used {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+}
+
+.ring-text {
+  font-size: 34px;
+  fill: var(--ink);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend b {
+  display: block;
+  font-weight: 600;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border: 1.5px solid;
+}
+
+.dot-bill {
+  border-color: var(--accent);
+}
+
+.dot-budget {
+  border-color: var(--line);
+}
+
+/* graphs */
+.graph-box {
+  position: relative;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  height: 100px;
+  padding: 8px;
+}
+
+.graph {
+  width: 100%;
+  height: 100%;
+}
+
+.graph-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.grid-line {
+  stroke: var(--soft-line);
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.graph-now {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- table ---------- */
+
+.section-title {
+  font-size: 17px;
+  font-weight: 500;
+  margin: 26px 0 10px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid var(--line);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid var(--soft-line);
+  font-size: 14px;
+}
+
+.table th {
+  background: #f3f3f1;
+  border-bottom: 1.5px solid var(--line);
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--muted);
+  border: 1.5px dashed var(--soft-line);
+  padding: 24px;
+  text-align: center;
+}
+
+/* status badges, one colour per state from the plan */
+.badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.badge.running {
+  color: #1f7a3d;
+  background: #e6f4ea;
+}
+.badge.pending,
+.badge.cloning,
+.badge.cloned,
+.badge.building,
+.badge.starting {
+  color: #8a6100;
+  background: #fff4d6;
+}
+.badge.unhealthy {
+  color: #b54708;
+  background: #ffe9d6;
+}
+.badge.failed {
+  color: #b3261e;
+  background: #fde7e5;
+}
+.badge.rolled_back {
+  color: #555;
+  background: #eee;
+}
+
+/* ---------- new deployment form ---------- */
+
+.new-form {
+  display: flex;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.new-form input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.new-form button {
+  padding: 8px 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.new-form button:hover {
+  background: #2f5bb5;
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 800px) {
+  .app {
+    margin: 0;
+    border-radius: 0;
+  }
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    width: 130px;
+  }
+  .table {
+    display: block;
+    overflow-x: auto;
+  }
+}

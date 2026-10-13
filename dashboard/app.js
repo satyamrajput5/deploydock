@@ -18,6 +18,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let activeLogsDeploymentId = null;
 
+  const authModal = document.getElementById('auth-modal');
+  const authForm = document.getElementById('auth-form');
+  const authEmail = document.getElementById('auth-email');
+  const authPassword = document.getElementById('auth-password');
+  const authErrorBanner = document.getElementById('auth-error-banner');
+  const authRegisterBtn = document.getElementById('auth-register-btn');
+  const TOKEN_KEY = 'deploydock-token';
+
+  function showAuthModal() {
+    authModal.style.display = 'flex';
+  }
+
+  // Same as fetch(), but adds the JWT. If the server says 401, ask the user to log in again.
+  async function authFetch(url, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      sessionStorage.removeItem(TOKEN_KEY);
+      showAuthModal();
+    }
+    return res;
+  }
+
+  async function submitAuth(mode) {
+    authErrorBanner.style.display = 'none';
+    try {
+      const res = await fetch('/auth/' + mode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail.value.trim(), password: authPassword.value })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Authentication failed');
+
+      sessionStorage.setItem(TOKEN_KEY, data.token);
+      authPassword.value = '';
+      authModal.style.display = 'none';
+      await fetchDeployments();
+    } catch (err) {
+      authErrorBanner.textContent = err.message;
+      authErrorBanner.style.display = 'block';
+    }
+  }
+
+  authForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitAuth('login');
+  });
+  authRegisterBtn?.addEventListener('click', () => submitAuth('register'));
+
+
   function initTheme() {
     const savedTheme = localStorage.getItem('deploydock-theme') || 'dark';
     applyTheme(savedTheme);
@@ -125,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     errorBanner.style.display = 'none';
 
     try {
-      const res = await fetch('/deployments', {
+      const res = await authFetch('/deployments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repo_url: url })
@@ -149,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchDeployments() {
     try {
-      const res = await fetch('/deployments');
+      const res = await authFetch('/deployments');
       if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       const list = data.deployments || [];
@@ -214,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchLogs(id) {
     try {
-      const res = await fetch(`/deployments/${id}/logs`);
+      const res = await authFetch(`/deployments/${id}/logs`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch logs');
 
@@ -233,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!confirm(`Delete deployment #${id}?`)) return;
 
     try {
-      const res = await fetch(`/deployments/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`/deployments/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
       await fetchDeployments();
     } catch (err) {

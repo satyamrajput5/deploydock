@@ -9,6 +9,7 @@ import (
 	"github.com/satyamrajput5/deploydock/internal/config"
 	"github.com/satyamrajput5/deploydock/internal/db"
 	"github.com/satyamrajput5/deploydock/internal/handlers"
+	"github.com/satyamrajput5/deploydock/internal/middleware"
 )
 
 func main() {
@@ -47,6 +48,7 @@ func main() {
 	}
 
 	api := r.Group("/")
+	api.Use(middleware.AuthRequired(cfg.JWTSecret))
 	{
 		api.POST("/deployments", deployH.Create)
 		api.GET("/deployments", deployH.List)
