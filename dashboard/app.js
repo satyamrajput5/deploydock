@@ -420,9 +420,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      textEl.textContent = logs.map(l => `[${new Date(l.created_at).toLocaleTimeString()}] ${l.message}`).join('\n');
+      const formatted = logs.map(l => {
+        const time = l.created_at ? new Date(l.created_at).toLocaleTimeString() : '';
+        return `[${time}] ${l.message}`;
+      }).join('\n');
 
-      if (detailAutoscroll && container) {
+      if (textEl.textContent !== formatted) {
+        textEl.textContent = formatted;
+        if (detailAutoscroll && container) {
+          requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+          });
+        }
+      } else if (detailAutoscroll && container) {
         container.scrollTop = container.scrollHeight;
       }
     } catch (err) {
@@ -433,6 +443,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('detail-scroll-logs-btn')?.addEventListener('click', (e) => {
     detailAutoscroll = !detailAutoscroll;
     e.target.textContent = `Auto-scroll: ${detailAutoscroll ? 'ON' : 'OFF'}`;
+    if (detailAutoscroll) {
+      const container = document.getElementById('detail-terminal-container');
+      if (container) {
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+        });
+      }
+    }
   });
 
   document.getElementById('detail-clear-logs-btn')?.addEventListener('click', () => {
@@ -486,7 +504,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      terminalText.textContent = data.logs.map(l => `[${new Date(l.created_at).toLocaleTimeString()}] ${l.message}`).join('\n');
+      const formatted = data.logs.map(l => {
+        const time = l.created_at ? new Date(l.created_at).toLocaleTimeString() : '';
+        return `[${time}] ${l.message}`;
+      }).join('\n');
+
+      if (terminalText.textContent !== formatted) {
+        terminalText.textContent = formatted;
+        requestAnimationFrame(() => {
+          terminalText.scrollTop = terminalText.scrollHeight;
+        });
+      }
     } catch (err) {
       terminalText.textContent = `Error loading logs: ${err.message}`;
     }
