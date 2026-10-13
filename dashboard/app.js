@@ -21,6 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const step1ErrorBanner = document.getElementById('step1-error-banner');
   const step2ErrorBanner = document.getElementById('step2-error-banner');
   const step3ErrorBanner = document.getElementById('step3-error-banner');
+  const editEnvModal = document.getElementById('edit-env-modal');
+  const editEnvCloseBtn = document.getElementById('edit-env-close-btn');
+  const editEnvCancelBtn = document.getElementById('edit-env-cancel-btn');
+  const editEnvSaveBtn = document.getElementById('edit-env-save-btn');
+  const editEnvTbody = document.getElementById('edit-env-vars-tbody');
+  const editEnvTableEmpty = document.getElementById('edit-env-table-empty');
+  const btnAddEditEnvVar = document.getElementById('btn-add-edit-env-var');
+  const editEnvErrorBanner = document.getElementById('edit-env-error-banner');
+  const detailEnvVarsBtn = document.getElementById('detail-env-vars-btn');
+  const envModalTargetId = document.getElementById('env-modal-target-id');
   const terminalText = document.getElementById('terminal-output-text');
   const logsTargetId = document.getElementById('logs-target-id');
   const sidebar = document.getElementById('app-sidebar');
@@ -205,13 +215,16 @@ document.addEventListener('DOMContentLoaded', () => {
     tdVal.appendChild(inputVal);
 
     const tdSecret = document.createElement('td');
-    tdSecret.className = 'secret-checkbox-wrap';
+    tdSecret.className = 'cell-secret';
+    const wrapSecret = document.createElement('div');
+    wrapSecret.className = 'secret-checkbox-wrap';
     const checkSecret = document.createElement('input');
     checkSecret.type = 'checkbox';
     checkSecret.className = 'env-secret-checkbox';
     checkSecret.checked = !!isSecret;
     checkSecret.title = 'Encrypt in database';
-    tdSecret.appendChild(checkSecret);
+    wrapSecret.appendChild(checkSecret);
+    tdSecret.appendChild(wrapSecret);
 
     inputKey.addEventListener('input', () => {
       const u = inputKey.value.toUpperCase();
@@ -476,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr data-id="${item.id}" class="clickable-row" onclick="window.onRowClick(event, ${item.id})">
           <td class="cell-id">#${item.id}</td>
           <td>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div class="repo-cell-wrap">
               <a class="cell-repo" href="${item.repo_url}" target="_blank" rel="noopener noreferrer" title="${item.repo_url}" onclick="event.stopPropagation()">
                 ${item.repo_url.replace('https://github.com/', '')}
               </a>
@@ -605,6 +618,13 @@ document.addEventListener('DOMContentLoaded', () => {
         visitBtn.style.display = 'none';
       }
 
+      const envBtn = document.getElementById('detail-env-vars-btn');
+      if (envBtn) {
+        envBtn.onclick = () => {
+          openEditEnvModal(data.id);
+        };
+      }
+
       const redeployBtn = document.getElementById('detail-redeploy-btn');
       if (redeployBtn) {
         redeployBtn.onclick = async () => {
@@ -628,6 +648,209 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Failed loading detail:', err);
     }
   }
+
+  function addEditEnvVarRow(key = '', value = '', isSecret = false, isExistingSecret = false) {
+    if (!editEnvTbody) return null;
+
+    const tr = document.createElement('tr');
+    tr.className = 'env-var-row';
+
+    const tdKey = document.createElement('td');
+    const inputKey = document.createElement('input');
+    inputKey.type = 'text';
+    inputKey.className = 'env-key-input';
+    inputKey.placeholder = 'KEY_NAME';
+    inputKey.value = key;
+    tdKey.appendChild(inputKey);
+
+    const tdVal = document.createElement('td');
+    const inputVal = document.createElement('input');
+    inputVal.className = 'env-val-input';
+    inputVal.placeholder = 'Value';
+
+    if (isSecret) {
+      inputVal.type = 'password';
+      inputVal.value = value || '••••••••••••';
+      if (isExistingSecret) {
+        inputVal.classList.add('is-secret-masked');
+        inputVal.dataset.existingSecret = 'true';
+      }
+    } else {
+      inputVal.type = 'text';
+      inputVal.value = value;
+    }
+
+    inputVal.addEventListener('copy', (e) => {
+      if (checkSecret.checked) {
+        e.preventDefault();
+      }
+    });
+    inputVal.addEventListener('cut', (e) => {
+      if (checkSecret.checked) {
+        e.preventDefault();
+      }
+    });
+
+    inputVal.addEventListener('focus', () => {
+      if (inputVal.dataset.existingSecret === 'true') {
+        inputVal.value = '';
+        inputVal.classList.remove('is-secret-masked');
+        delete inputVal.dataset.existingSecret;
+      }
+    });
+
+    tdVal.appendChild(inputVal);
+
+    const tdSecret = document.createElement('td');
+    tdSecret.className = 'cell-secret';
+    const wrapSecret = document.createElement('div');
+    wrapSecret.className = 'secret-checkbox-wrap';
+    const checkSecret = document.createElement('input');
+    checkSecret.type = 'checkbox';
+    checkSecret.className = 'env-secret-checkbox';
+    checkSecret.checked = !!isSecret;
+    checkSecret.title = 'Encrypt in database';
+    wrapSecret.appendChild(checkSecret);
+    tdSecret.appendChild(wrapSecret);
+
+    checkSecret.addEventListener('change', () => {
+      if (checkSecret.checked) {
+        inputVal.type = 'password';
+      } else {
+        inputVal.type = 'text';
+        if (inputVal.dataset.existingSecret === 'true') {
+          inputVal.value = '';
+          inputVal.classList.remove('is-secret-masked');
+          delete inputVal.dataset.existingSecret;
+        }
+      }
+    });
+
+    const tdAction = document.createElement('td');
+    tdAction.style.textAlign = 'center';
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove-row';
+    btnDel.title = 'Remove variable';
+    btnDel.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    btnDel.addEventListener('click', () => {
+      tr.remove();
+      updateEditEnvTableEmptyState();
+    });
+    tdAction.appendChild(btnDel);
+
+    tr.appendChild(tdKey);
+    tr.appendChild(tdVal);
+    tr.appendChild(tdSecret);
+    tr.appendChild(tdAction);
+
+    editEnvTbody.appendChild(tr);
+    updateEditEnvTableEmptyState();
+    return inputKey;
+  }
+
+  function updateEditEnvTableEmptyState() {
+    if (!editEnvTbody || !editEnvTableEmpty) return;
+    const rows = editEnvTbody.querySelectorAll('tr.env-var-row');
+    editEnvTableEmpty.style.display = rows.length === 0 ? 'block' : 'none';
+  }
+
+  async function openEditEnvModal(deploymentId) {
+    if (!editEnvModal) return;
+    editEnvModal.style.display = 'flex';
+    if (envModalTargetId) envModalTargetId.textContent = `#${deploymentId}`;
+    if (editEnvErrorBanner) editEnvErrorBanner.style.display = 'none';
+    if (editEnvTbody) editEnvTbody.innerHTML = '';
+    updateEditEnvTableEmptyState();
+
+    try {
+      const res = await fetch(`/deployments/${deploymentId}/env-vars`);
+      if (!res.ok) throw new Error('Failed to load environment variables');
+      const data = await res.json();
+      const list = data.env_vars || [];
+
+      if (editEnvTbody) {
+        editEnvTbody.innerHTML = '';
+        list.forEach(item => {
+          addEditEnvVarRow(item.key, item.value, item.is_secret, item.is_secret);
+        });
+        updateEditEnvTableEmptyState();
+      }
+    } catch (err) {
+      if (editEnvErrorBanner) {
+        editEnvErrorBanner.textContent = err.message || 'Failed to load variables';
+        editEnvErrorBanner.style.display = 'block';
+      }
+    }
+  }
+
+  function closeEditEnvModal() {
+    if (editEnvModal) editEnvModal.style.display = 'none';
+  }
+
+  editEnvCloseBtn?.addEventListener('click', closeEditEnvModal);
+  editEnvCancelBtn?.addEventListener('click', closeEditEnvModal);
+
+  btnAddEditEnvVar?.addEventListener('click', () => {
+    const input = addEditEnvVarRow('', '', false, false);
+    if (input) input.focus();
+  });
+
+  editEnvSaveBtn?.addEventListener('click', async () => {
+    if (!currentDetailId) return;
+    if (editEnvErrorBanner) editEnvErrorBanner.style.display = 'none';
+
+    const envVarItems = [];
+    if (editEnvTbody) {
+      const rows = editEnvTbody.querySelectorAll('tr.env-var-row');
+      rows.forEach(tr => {
+        const keyInput = tr.querySelector('.env-key-input');
+        const valInput = tr.querySelector('.env-val-input');
+        const secCheckbox = tr.querySelector('.env-secret-checkbox');
+        if (keyInput) {
+          const k = keyInput.value.trim();
+          if (k !== '') {
+            let val = valInput ? valInput.value : '';
+            if (valInput && valInput.dataset.existingSecret === 'true') {
+              val = '••••••••••••';
+            }
+            envVarItems.push({
+              key: k,
+              value: val,
+              is_secret: secCheckbox ? secCheckbox.checked : false
+            });
+          }
+        }
+      });
+    }
+
+    const originalText = editEnvSaveBtn.innerHTML;
+    editEnvSaveBtn.disabled = true;
+    editEnvSaveBtn.innerHTML = '<span>Saving...</span>';
+
+    try {
+      const res = await fetch(`/deployments/${currentDetailId}/env-vars`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env_var_items: envVarItems })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save environment variables');
+      }
+
+      closeEditEnvModal();
+    } catch (err) {
+      if (editEnvErrorBanner) {
+        editEnvErrorBanner.textContent = err.message || 'Failed to save environment variables';
+        editEnvErrorBanner.style.display = 'block';
+      }
+    } finally {
+      editEnvSaveBtn.disabled = false;
+      editEnvSaveBtn.innerHTML = originalText;
+    }
+  });
 
   async function loadBuildsTable(id) {
     try {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -554,4 +555,117 @@ func (h *DeploymentHandler) InspectRepo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resp)
 }
+
+func (h *DeploymentHandler) GetEnvVars(c *gin.Context) {
+	deploymentID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deployment ID format"})
+		return
+	}
+
+	var exists bool
+	err = h.db.GetContext(c.Request.Context(), &exists, `SELECT EXISTS(SELECT 1 FROM public.deployments WHERE id = $1)`, deploymentID)
+	if err != nil || !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Deployment not found"})
+		return
+	}
+
+	type envRow struct {
+		Key            string `db:"key"`
+		EncryptedValue string `db:"encrypted_value"`
+		IsSecret       bool   `db:"is_secret"`
+	}
+
+	var rows []envRow
+	query := `SELECT key, encrypted_value, is_secret FROM public.deployment_env_vars WHERE deployment_id = $1 ORDER BY id ASC`
+	if err := h.db.SelectContext(c.Request.Context(), &rows, query, deploymentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve environment variables: " + err.Error()})
+		return
+	}
+
+	items := make([]models.EnvVarItem, 0, len(rows))
+	for _, r := range rows {
+		val := "••••••••••••"
+		if !r.IsSecret {
+			if dec, err := crypto.Decrypt(r.EncryptedValue); err == nil {
+				val = dec
+			} else {
+				val = ""
+			}
+		}
+		items = append(items, models.EnvVarItem{
+			Key:      r.Key,
+			Value:    val,
+			IsSecret: r.IsSecret,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"deployment_id": deploymentID,
+		"env_vars":      items,
+	})
+}
+
+type UpdateEnvVarsRequest struct {
+	EnvVarItems []models.EnvVarItem `json:"env_var_items"`
+}
+
+func (h *DeploymentHandler) UpdateEnvVars(c *gin.Context) {
+	deploymentID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deployment ID format"})
+		return
+	}
+
+	var exists bool
+	err = h.db.GetContext(c.Request.Context(), &exists, `SELECT EXISTS(SELECT 1 FROM public.deployments WHERE id = $1)`, deploymentID)
+	if err != nil || !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Deployment not found"})
+		return
+	}
+
+	var req UpdateEnvVarsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	keptKeys := make([]string, 0)
+	for _, item := range req.EnvVarItems {
+		trimmedKey := strings.TrimSpace(item.Key)
+		if trimmedKey == "" {
+			continue
+		}
+		keptKeys = append(keptKeys, trimmedKey)
+
+		if item.IsSecret && item.Value == "••••••••••••" {
+			_, _ = h.db.ExecContext(c.Request.Context(), `
+				UPDATE public.deployment_env_vars SET is_secret = true, updated_at = NOW() WHERE deployment_id = $1 AND key = $2
+			`, deploymentID, trimmedKey)
+			continue
+		}
+
+		encVal, err := crypto.Encrypt(item.Value)
+		if err == nil {
+			_, _ = h.db.ExecContext(c.Request.Context(), `
+				INSERT INTO public.deployment_env_vars (deployment_id, key, encrypted_value, is_secret, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, NOW(), NOW())
+				ON CONFLICT (deployment_id, key) DO UPDATE SET encrypted_value = EXCLUDED.encrypted_value, is_secret = EXCLUDED.is_secret, updated_at = NOW()
+			`, deploymentID, trimmedKey, encVal, item.IsSecret)
+		}
+	}
+
+	if len(keptKeys) > 0 {
+		query, args, qErr := sqlx.In(`DELETE FROM public.deployment_env_vars WHERE deployment_id = ? AND key NOT IN (?)`, deploymentID, keptKeys)
+		if qErr == nil {
+			query = h.db.Rebind(query)
+			_, _ = h.db.ExecContext(c.Request.Context(), query, args...)
+		}
+	} else {
+		_, _ = h.db.ExecContext(c.Request.Context(), `DELETE FROM public.deployment_env_vars WHERE deployment_id = $1`, deploymentID)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Environment variables updated successfully"})
+}
+
 

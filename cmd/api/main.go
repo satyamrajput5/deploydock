@@ -70,6 +70,8 @@ func main() {
 		api.DELETE("/deployments/:id", deployH.Delete)
 		api.GET("/deployments/:id/logs", deployH.Logs)
 		api.POST("/repos/inspect", deployH.InspectRepo)
+		api.GET("/deployments/:id/env-vars", deployH.GetEnvVars)
+		api.PUT("/deployments/:id/env-vars", deployH.UpdateEnvVars)
 	}
 
 	addr := ":" + cfg.Port

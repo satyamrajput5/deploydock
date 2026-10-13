@@ -634,27 +634,28 @@ canvas {
 
 .data-table {
   width: 100%;
-  min-width: 640px;
   border-collapse: collapse;
   text-align: left;
 }
 
 .data-table th {
   background: var(--panel-elevated);
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--fg-faint);
   border-bottom: 1px solid var(--border);
+  white-space: nowrap;
 }
 
 .data-table td {
-  padding: 10px 12px;
+  padding: 10px 14px;
   font-size: 0.84rem;
   border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .data-table tr:hover td {
@@ -665,22 +666,45 @@ canvas {
   font-family: var(--font-mono);
   font-weight: 500;
   color: var(--fg-muted);
+  width: 48px;
+}
+
+.repo-cell-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .cell-repo {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--fg);
   text-decoration: none;
-  max-width: 240px;
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .cell-repo:hover {
   text-decoration: underline;
+}
+
+.branch-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .cell-port {
@@ -761,12 +785,13 @@ canvas {
 .status-restarting::before { background-color: #f97316; }
 
 .docker-status-sub {
-  display: block;
+  display: inline-block;
+  margin-left: 6px;
   font-size: 0.72rem;
-  color: var(--fg-muted);
+  color: var(--fg-faint);
   font-family: var(--font-mono);
-  margin-top: 3px;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .table-empty-state {
@@ -1521,17 +1546,39 @@ canvas {
   border-color: var(--fg-muted);
 }
 
-.secret-checkbox-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.env-vars-table td.cell-secret {
+  text-align: center;
+  vertical-align: middle;
 }
 
-.secret-checkbox-wrap input[type="checkbox"] {
+.secret-checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  height: 28px;
+}
+
+.secret-checkbox-wrap input[type="checkbox"],
+.env-secret-checkbox {
   width: 16px;
   height: 16px;
+  margin: 0 auto;
   accent-color: var(--accent);
   cursor: pointer;
+  display: block;
+}
+
+.env-val-input.is-secret-masked {
+  letter-spacing: 0.15em;
+  font-family: var(--font-mono);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.modal-subtitle {
+  font-size: 0.76rem;
+  color: var(--fg-muted);
 }
 
 .btn-remove-row {

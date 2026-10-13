@@ -269,6 +269,15 @@
                   </svg>
                   <span>Open App</span>
                 </a>
+                <button class="btn btn-secondary btn-sm" id="detail-env-vars-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                  </svg>
+                  <span>Environment Variables</span>
+                </button>
                 <button class="btn btn-secondary btn-sm" id="detail-redeploy-btn">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -549,6 +558,73 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="edit-env-modal" style="display: none;">
+    <div class="modal-dialog modal-wizard">
+      <div class="modal-header">
+        <div class="modal-header-nav">
+          <h2 class="modal-title">Environment Variables — <span id="env-modal-target-id">#0</span></h2>
+          <span class="modal-subtitle">Configure environment variables. Secrets are encrypted with AES-256 and masked.</span>
+        </div>
+        <button class="modal-close-btn" id="edit-env-close-btn" aria-label="Close modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="env-table-header-row">
+          <div class="env-header-meta">
+            <span class="form-hint">Edit existing variables or add new ones. Changes will apply on the next deployment.</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-add-edit-env-var">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Add Variable</span>
+          </button>
+        </div>
+
+        <div class="env-vars-container">
+          <table class="env-vars-table" id="edit-env-vars-table">
+            <thead>
+              <tr>
+                <th style="width: 38%;">Name / Key</th>
+                <th style="width: 38%;">Value</th>
+                <th style="width: 14%; text-align: center;">Secret</th>
+                <th style="width: 10%; text-align: center;"></th>
+              </tr>
+            </thead>
+            <tbody id="edit-env-vars-tbody">
+            </tbody>
+          </table>
+          <div class="env-table-empty" id="edit-env-table-empty" style="display: none;">
+            <span>No environment variables configured. Click "Add Variable" to add one.</span>
+          </div>
+        </div>
+
+        <div class="env-security-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Secret variables are masked with bullets (••••••••••••), protected from copying, and stored encrypted with AES-256.</span>
+        </div>
+
+        <div class="form-error-banner" id="edit-env-error-banner" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="edit-env-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="edit-env-save-btn">
+          <span class="btn-text">Save Changes</span>
+        </button>
+      </div>
     </div>
   </div>
 
