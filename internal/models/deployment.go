@@ -29,6 +29,7 @@ type Deployment struct {
 	Status           DeploymentStatus `json:"status" db:"status"`
 	Port             *int             `json:"port,omitempty" db:"port"`
 	ContainerID      *string          `json:"container_id,omitempty" db:"container_id"`
+	DockerStatus     *string          `json:"docker_status,omitempty" db:"-"`
 	ImageTag         *string          `json:"image_tag,omitempty" db:"image_tag"`
 	ErrorMessage     *string          `json:"error_message,omitempty" db:"error_message"`
 	BuildNumber      *int             `json:"build_number,omitempty" db:"build_number"`

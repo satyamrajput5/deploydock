@@ -197,3 +197,43 @@ func AllocatePort(db *sqlx.DB) (int, error) {
 
 	return 0, fmt.Errorf("all ports in range 4000-4999 are currently allocated or occupied on the host")
 }
+
+type LiveContainerStatus struct {
+	ID     string
+	State  string
+	Status string
+	Name   string
+}
+
+func GetAllContainerStates(ctx context.Context) (map[string]LiveContainerStatus, error) {
+	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--format", "{{.ID}}|{{.State}}|{{.Status}}|{{.Names}}")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]LiveContainerStatus)
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "|")
+		if len(parts) >= 3 {
+			id := parts[0]
+			state := parts[1]
+			status := parts[2]
+			name := ""
+			if len(parts) >= 4 {
+				name = parts[3]
+			}
+			result[id] = LiveContainerStatus{
+				ID:     id,
+				State:  state,
+				Status: status,
+				Name:   name,
+			}
+		}
+	}
+	return result, nil
+}

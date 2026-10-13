@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/satyamrajput5/deploydock/internal/builder"
 	"github.com/satyamrajput5/deploydock/internal/crypto"
 	"github.com/satyamrajput5/deploydock/internal/models"
 	"github.com/satyamrajput5/deploydock/internal/worker"
@@ -157,6 +158,44 @@ func (h *DeploymentHandler) List(c *gin.Context) {
 		return
 	}
 
+	liveMap, _ := builder.GetAllContainerStates(c.Request.Context())
+	if liveMap != nil {
+		for i := range deployments {
+			d := &deployments[i]
+			origStatus := d.Status
+			if d.ContainerID != nil && *d.ContainerID != "" {
+				if live, ok := liveMap[*d.ContainerID]; ok {
+					d.DockerStatus = &live.Status
+					switch live.State {
+					case "running":
+						d.Status = models.StatusRunning
+					case "restarting":
+						d.Status = models.DeploymentStatus("restarting")
+					case "exited":
+						d.Status = models.DeploymentStatus("stopped")
+					case "dead":
+						d.Status = models.StatusFailed
+					case "paused":
+						d.Status = models.DeploymentStatus("paused")
+					}
+				} else {
+					notRunning := "container not found"
+					d.DockerStatus = &notRunning
+					if d.Status == models.StatusRunning {
+						d.Status = models.DeploymentStatus("stopped")
+					}
+				}
+
+				if d.Status != origStatus {
+					_, _ = h.db.ExecContext(c.Request.Context(), `UPDATE public.deployments SET status = $1, updated_at = NOW() WHERE id = $2`, d.Status, d.ID)
+					if d.CurrentBuildID != nil {
+						_, _ = h.db.ExecContext(c.Request.Context(), `UPDATE public.deployment_builds SET status = $1 WHERE id = $2`, d.Status, *d.CurrentBuildID)
+					}
+				}
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"deployments": deployments,
 		"limit":       limit,
@@ -195,6 +234,39 @@ func (h *DeploymentHandler) Get(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
 		return
+	}
+
+	liveMap, _ := builder.GetAllContainerStates(c.Request.Context())
+	if liveMap != nil && deployment.ContainerID != nil && *deployment.ContainerID != "" {
+		origStatus := deployment.Status
+		if live, ok := liveMap[*deployment.ContainerID]; ok {
+			deployment.DockerStatus = &live.Status
+			switch live.State {
+			case "running":
+				deployment.Status = models.StatusRunning
+			case "restarting":
+				deployment.Status = models.DeploymentStatus("restarting")
+			case "exited":
+				deployment.Status = models.DeploymentStatus("stopped")
+			case "dead":
+				deployment.Status = models.StatusFailed
+			case "paused":
+				deployment.Status = models.DeploymentStatus("paused")
+			}
+		} else {
+			notRunning := "container not found"
+			deployment.DockerStatus = &notRunning
+			if deployment.Status == models.StatusRunning {
+				deployment.Status = models.DeploymentStatus("stopped")
+			}
+		}
+
+		if deployment.Status != origStatus {
+			_, _ = h.db.ExecContext(c.Request.Context(), `UPDATE public.deployments SET status = $1, updated_at = NOW() WHERE id = $2`, deployment.Status, deployment.ID)
+			if deployment.CurrentBuildID != nil {
+				_, _ = h.db.ExecContext(c.Request.Context(), `UPDATE public.deployment_builds SET status = $1 WHERE id = $2`, deployment.Status, *deployment.CurrentBuildID)
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, deployment)

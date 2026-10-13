@@ -706,6 +706,29 @@ canvas {
 }
 .status-failed::before { background-color: var(--danger); }
 
+.status-stopped, .status-exited, .status-rolled_back, .status-paused {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--fg-muted);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+.status-stopped::before, .status-exited::before, .status-rolled_back::before, .status-paused::before { background-color: var(--fg-muted); }
+
+.status-restarting {
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+.status-restarting::before { background-color: #f97316; }
+
+.docker-status-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
 .table-empty-state {
   padding: 36px 16px;
   text-align: center;

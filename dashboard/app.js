@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td><span class="version-tag">${versionText}</span></td>
           <td>
             <span class="status-badge ${statusClass}">${item.status}</span>
+            ${item.docker_status ? `<span class="docker-status-sub" title="Docker: ${item.docker_status}">${item.docker_status}</span>` : ''}
           </td>
           <td class="cell-port">${portDisplay}</td>
           <td class="cell-url">${liveUrl}</td>
@@ -327,6 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ghLink.href = data.repo_url;
       ghLink.textContent = data.repo_url;
       document.getElementById('detail-created-val').textContent = data.created_at ? new Date(data.created_at).toLocaleString() : '—';
+      const dockerVal = document.getElementById('detail-docker-val');
+      if (dockerVal) {
+        dockerVal.textContent = data.docker_status || (data.status === 'running' ? 'Active' : '—');
+      }
 
       const visitBtn = document.getElementById('detail-visit-btn');
       if (data.port) {
