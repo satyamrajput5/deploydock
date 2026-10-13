@@ -50,6 +50,10 @@ func (h *DeploymentHandler) Create(c *gin.Context) {
 	}
 
 	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
 	var deployment models.Deployment
 	insertQuery := `
@@ -80,14 +84,21 @@ func (h *DeploymentHandler) List(c *gin.Context) {
 		}
 	}
 
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	deployments := make([]models.Deployment, 0)
 	query := `
 		SELECT id, user_id, repo_url, status, port, container_id, image_tag, url, error_message, build_number, created_at, updated_at
 		FROM public.deployments
+		WHERE user_id = $1
 		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
+		LIMIT $2 OFFSET $3
 	`
-	err := h.db.SelectContext(c.Request.Context(), &deployments, query, limit, offset)
+	err := h.db.SelectContext(c.Request.Context(), &deployments, query, *userID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query deployments: " + err.Error()})
 		return
@@ -108,13 +119,19 @@ func (h *DeploymentHandler) Get(c *gin.Context) {
 		return
 	}
 
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var deployment models.Deployment
 	query := `
 		SELECT id, user_id, repo_url, status, port, container_id, image_tag, url, error_message, build_number, created_at, updated_at
 		FROM public.deployments
-		WHERE id = $1
+		WHERE id = $1 AND user_id = $2
 	`
-	err = h.db.GetContext(c.Request.Context(), &deployment, query, deploymentID)
+	err = h.db.GetContext(c.Request.Context(), &deployment, query, deploymentID, *userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Deployment not found"})
@@ -134,8 +151,14 @@ func (h *DeploymentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	query := `DELETE FROM public.deployments WHERE id = $1`
-	result, err := h.db.ExecContext(c.Request.Context(), query, deploymentID)
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	query := `DELETE FROM public.deployments WHERE id = $1 AND user_id = $2`
+	result, err := h.db.ExecContext(c.Request.Context(), query, deploymentID, *userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete deployment: " + err.Error()})
 		return
@@ -157,6 +180,24 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 	deploymentID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deployment ID format"})
+		return
+	}
+
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var owned bool
+	if err := h.db.GetContext(c.Request.Context(), &owned,
+		`SELECT EXISTS(SELECT 1 FROM public.deployments WHERE id = $1 AND user_id = $2)`,
+		deploymentID, *userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+		return
+	}
+	if !owned {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Deployment not found"})
 		return
 	}
 
