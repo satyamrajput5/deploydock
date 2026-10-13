@@ -47,7 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let modalLogsInterval = null;
   let currentDetailId = null;
   let detailLogsInterval = null;
+  let detailDataInterval = null;
+  let dashboardStatsInterval = null;
+  let detailStatsInterval = null;
   let detailAutoscroll = true;
+  let dashboardCpuChart = null;
+  let dashboardRamChart = null;
+  let detailCpuChart = null;
+  let detailRamChart = null;
 
   function initTheme() {
     const savedTheme = localStorage.getItem('deploydock-theme') || 'dark';
@@ -532,20 +539,52 @@ document.addEventListener('DOMContentLoaded', () => {
       clearInterval(detailLogsInterval);
       detailLogsInterval = null;
     }
+    if (detailDataInterval) {
+      clearInterval(detailDataInterval);
+      detailDataInterval = null;
+    }
+    if (detailStatsInterval) {
+      clearInterval(detailStatsInterval);
+      detailStatsInterval = null;
+    }
     detailView.style.display = 'none';
     dashboardView.style.display = 'block';
     resizeAllCanvases();
+
+    if (!dashboardStatsInterval) {
+      fetchDashboardStats();
+      dashboardStatsInterval = setInterval(fetchDashboardStats, 3000);
+    }
   }
 
   async function showDeploymentDetail(id) {
     currentDetailId = id;
+    if (dashboardStatsInterval) {
+      clearInterval(dashboardStatsInterval);
+      dashboardStatsInterval = null;
+    }
+    if (detailStatsInterval) {
+      clearInterval(detailStatsInterval);
+      detailStatsInterval = null;
+    }
+
     dashboardView.style.display = 'none';
     detailView.style.display = 'block';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    if (detailCpuChart) detailCpuChart.reset();
+    if (detailRamChart) detailRamChart.reset();
+
     await loadDeploymentDetailData(id);
-    initDetailCharts();
+    resizeAllCanvases();
+
+    fetchDetailStats(id);
+    detailStatsInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        fetchDetailStats(id);
+      }
+    }, 3000);
 
     if (detailLogsInterval) clearInterval(detailLogsInterval);
     fetchDetailLogs(id);
@@ -554,6 +593,13 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDetailLogs(id);
       }
     }, 1500);
+
+    if (detailDataInterval) clearInterval(detailDataInterval);
+    detailDataInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        loadDeploymentDetailData(id);
+      }
+    }, 2000);
   }
 
   function handleRouting() {
@@ -1028,39 +1074,64 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resizeAllCanvases);
 
   function initCharts() {
-    setupCanvasChart('cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', (val) => {
-      const el = document.getElementById('cpu-current-pct');
-      if (el) el.textContent = `${val.toFixed(1)}%`;
-    });
-
-    setupCanvasChart('ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', (val) => {
-      const el = document.getElementById('ram-current-val');
-      if (el) el.textContent = `${Math.round(val * 16)} MB`;
-    });
+    dashboardCpuChart = setupCanvasChart('cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', { isRam: false });
+    dashboardRamChart = setupCanvasChart('ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', { isRam: true });
+    detailCpuChart = setupCanvasChart('detail-cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', { isRam: false });
+    detailRamChart = setupCanvasChart('detail-ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', { isRam: true });
   }
 
-  let detailChartsInitialized = false;
-  function initDetailCharts() {
-    if (detailChartsInitialized) return;
-    detailChartsInitialized = true;
+  async function fetchDashboardStats() {
+    try {
+      const res = await fetch('/stats');
+      if (!res.ok) return;
+      const data = await res.json();
+      const cpuVal = data.avg_cpu_pct || 0;
+      const memVal = data.avg_mem_mb || 0;
 
-    setupCanvasChart('detail-cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', (val) => {
-      const el = document.getElementById('detail-cpu-pct');
-      if (el) el.textContent = `${val.toFixed(1)}%`;
-    });
+      if (dashboardCpuChart) dashboardCpuChart.pushPoint(cpuVal);
+      if (dashboardRamChart) dashboardRamChart.pushPoint(memVal);
 
-    setupCanvasChart('detail-ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', (val) => {
-      const el = document.getElementById('detail-ram-val');
-      if (el) el.textContent = `${Math.round(val * 16)} MB`;
-    });
+      const cpuEl = document.getElementById('cpu-current-pct');
+      if (cpuEl) cpuEl.textContent = `${cpuVal.toFixed(1)}%`;
+
+      const ramEl = document.getElementById('ram-current-val');
+      if (ramEl) ramEl.textContent = `${Math.round(memVal)} MB`;
+    } catch (err) {
+      console.warn('Failed fetching dashboard stats:', err);
+    }
   }
 
-  function setupCanvasChart(canvasId, strokeColor, fillColor, onUpdate) {
+  async function fetchDetailStats(id) {
+    if (!id) return;
+    try {
+      const res = await fetch(`/deployments/${id}/stats`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const cpuVal = data.cpu_pct || 0;
+      const memVal = data.mem_mb || 0;
+
+      if (detailCpuChart) detailCpuChart.pushPoint(cpuVal);
+      if (detailRamChart) detailRamChart.pushPoint(memVal);
+
+      const cpuEl = document.getElementById('detail-cpu-pct');
+      if (cpuEl) cpuEl.textContent = `${cpuVal.toFixed(1)}%`;
+
+      const ramEl = document.getElementById('detail-ram-val');
+      if (ramEl) ramEl.textContent = `${Math.round(memVal)} MB`;
+    } catch (err) {
+      console.warn('Failed fetching detail stats:', err);
+    }
+  }
+
+  function setupCanvasChart(canvasId, strokeColor, fillColor, options = {}) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas) return null;
     const ctx = canvas.getContext('2d');
 
-    const points = Array.from({ length: 24 }, () => 12 + Math.random() * 18);
+    const pointCount = 24;
+    const points = Array(pointCount).fill(0);
+    const isRam = !!options.isRam;
+    let maxScale = isRam ? 256 : 100;
 
     function syncDimensions() {
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -1089,13 +1160,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      points.shift();
-      const last = points[points.length - 1];
-      const next = Math.max(8, Math.min(65, last + (Math.random() * 8 - 4)));
-      points.push(next);
-
-      if (onUpdate) onUpdate(next);
-
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       const actualStroke = strokeColor.startsWith('var') 
         ? (strokeColor.includes('cpu') ? (isLight ? '#0891b2' : '#06b6d4') : (isLight ? '#7c3aed' : '#8b5cf6')) 
@@ -1109,7 +1173,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const rightPad = 8;
       const topY = 7;
       const bottomY = h - 7;
-      const ticks = [0, 50, 100];
+
+      let currentMax = maxScale;
+      for (let i = 0; i < points.length; i++) {
+        if (points[i] > currentMax) currentMax = points[i];
+      }
+      if (isRam) {
+        if (currentMax > 256) currentMax = Math.ceil(currentMax / 128) * 128;
+        else currentMax = 256;
+      } else {
+        currentMax = Math.max(100, Math.ceil(currentMax / 50) * 50);
+      }
+
+      const ticks = [0, Math.round(currentMax / 2), Math.round(currentMax)];
 
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
@@ -1119,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const axisColor = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)';
 
       ticks.forEach(val => {
-        const tickY = bottomY - (val / 100) * (bottomY - topY);
+        const tickY = bottomY - (val / currentMax) * (bottomY - topY);
 
         ctx.fillStyle = labelColor;
         ctx.fillText(val.toString(), axisX - 5, tickY);
@@ -1148,7 +1224,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.moveTo(axisX, bottomY);
       points.forEach((p, i) => {
         const x = axisX + i * step;
-        const y = bottomY - (p / 100) * (bottomY - topY);
+        const clampedP = Math.max(0, Math.min(currentMax, p));
+        const y = bottomY - (clampedP / currentMax) * (bottomY - topY);
         ctx.lineTo(x, y);
       });
       ctx.lineTo(axisX + plotW, bottomY);
@@ -1159,7 +1236,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.beginPath();
       points.forEach((p, i) => {
         const x = axisX + i * step;
-        const y = bottomY - (p / 100) * (bottomY - topY);
+        const clampedP = Math.max(0, Math.min(currentMax, p));
+        const y = bottomY - (clampedP / currentMax) * (bottomY - topY);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -1167,8 +1245,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      const lastVal = points[points.length - 1];
+      const clampedLast = Math.max(0, Math.min(currentMax, lastVal));
       const lastX = axisX + (points.length - 1) * step;
-      const lastY = bottomY - (next / 100) * (bottomY - topY);
+      const lastY = bottomY - (clampedLast / currentMax) * (bottomY - topY);
 
       ctx.beginPath();
       ctx.arc(lastX, lastY, 2.75, 0, Math.PI * 2);
@@ -1185,12 +1265,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     draw();
-    setInterval(draw, 2500);
+
+    return {
+      pushPoint: function(val) {
+        points.shift();
+        points.push(val);
+        draw();
+      },
+      reset: function() {
+        points.fill(0);
+        draw();
+      },
+      redraw: draw
+    };
   }
 
   initTheme();
   fetchDeployments();
   initCharts();
+  fetchDashboardStats();
+  dashboardStatsInterval = setInterval(fetchDashboardStats, 3000);
   handleRouting();
   setInterval(fetchDeployments, 5000);
 });

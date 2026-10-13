@@ -10,6 +10,7 @@ import (
 	"github.com/satyamrajput5/deploydock/internal/config"
 	"github.com/satyamrajput5/deploydock/internal/db"
 	"github.com/satyamrajput5/deploydock/internal/handlers"
+	"github.com/satyamrajput5/deploydock/internal/metrics"
 	"github.com/satyamrajput5/deploydock/internal/worker"
 )
 
@@ -35,6 +36,9 @@ func main() {
 	authH := handlers.NewAuthHandler(database, cfg.JWTSecret, cfg.JWTExpiry)
 	deployH := handlers.NewDeploymentHandler(database)
 	webhookH := handlers.NewWebhookHandler(database)
+	metricsCollector := metrics.NewCollector()
+	metricsCollector.Start(context.Background())
+	metricsH := handlers.NewMetricsHandler(metricsCollector)
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -72,6 +76,8 @@ func main() {
 		api.POST("/repos/inspect", deployH.InspectRepo)
 		api.GET("/deployments/:id/env-vars", deployH.GetEnvVars)
 		api.PUT("/deployments/:id/env-vars", deployH.UpdateEnvVars)
+		api.GET("/stats", metricsH.GetSystemStats)
+		api.GET("/deployments/:id/stats", metricsH.GetDeploymentStats)
 	}
 
 	addr := ":" + cfg.Port
