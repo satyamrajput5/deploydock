@@ -80,13 +80,27 @@ func (h *DeploymentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if len(req.EnvVars) > 0 {
+	if len(req.EnvVarItems) > 0 {
+		for _, item := range req.EnvVarItems {
+			if item.Key == "" {
+				continue
+			}
+			encVal, err := crypto.Encrypt(item.Value)
+			if err == nil {
+				_, _ = h.db.ExecContext(c.Request.Context(), `
+					INSERT INTO public.deployment_env_vars (deployment_id, key, encrypted_value, is_secret, created_at, updated_at)
+					VALUES ($1, $2, $3, $4, NOW(), NOW())
+					ON CONFLICT (deployment_id, key) DO UPDATE SET encrypted_value = EXCLUDED.encrypted_value, is_secret = EXCLUDED.is_secret, updated_at = NOW()
+				`, deployment.ID, item.Key, encVal, item.IsSecret)
+			}
+		}
+	} else if len(req.EnvVars) > 0 {
 		for k, v := range req.EnvVars {
 			encVal, err := crypto.Encrypt(v)
 			if err == nil {
 				_, _ = h.db.ExecContext(c.Request.Context(), `
-					INSERT INTO public.deployment_env_vars (deployment_id, key, encrypted_value, created_at, updated_at)
-					VALUES ($1, $2, $3, NOW(), NOW())
+					INSERT INTO public.deployment_env_vars (deployment_id, key, encrypted_value, is_secret, created_at, updated_at)
+					VALUES ($1, $2, $3, false, NOW(), NOW())
 					ON CONFLICT (deployment_id, key) DO UPDATE SET encrypted_value = EXCLUDED.encrypted_value, updated_at = NOW()
 				`, deployment.ID, k, encVal)
 			}
@@ -517,3 +531,27 @@ func (h *DeploymentHandler) Logs(c *gin.Context) {
 		"logs":          logs,
 	})
 }
+
+func (h *DeploymentHandler) InspectRepo(c *gin.Context) {
+	var req models.InspectRepoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	if !githubURLRegex.MatchString(req.RepoURL) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid GitHub repository URL. Must match format: https://github.com/owner/repository",
+		})
+		return
+	}
+
+	resp, err := builder.InspectRepo(c.Request.Context(), req.RepoURL)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to inspect repository: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+

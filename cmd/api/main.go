@@ -69,6 +69,7 @@ func main() {
 		api.POST("/deployments/:id/rollback", deployH.Rollback)
 		api.DELETE("/deployments/:id", deployH.Delete)
 		api.GET("/deployments/:id/logs", deployH.Logs)
+		api.POST("/repos/inspect", deployH.InspectRepo)
 	}
 
 	addr := ":" + cfg.Port

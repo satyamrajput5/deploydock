@@ -38,19 +38,39 @@ type Deployment struct {
 	UpdatedAt        time.Time        `json:"updated_at" db:"updated_at"`
 }
 
+type EnvVarItem struct {
+	Key      string `json:"key"`
+	Value    string `json:"value"`
+	IsSecret bool   `json:"is_secret"`
+}
+
 type CreateDeploymentRequest struct {
-	RepoURL    string            `json:"repo_url" binding:"required"`
-	Branch     string            `json:"branch"`
-	AutoDeploy *bool             `json:"auto_deploy"`
-	EnvVars    map[string]string `json:"env_vars"`
+	RepoURL     string            `json:"repo_url" binding:"required"`
+	Branch      string            `json:"branch"`
+	AutoDeploy  *bool             `json:"auto_deploy"`
+	EnvVars     map[string]string `json:"env_vars,omitempty"`
+	EnvVarItems []EnvVarItem      `json:"env_var_items,omitempty"`
 }
 
 type UpdateDeploymentConfigRequest struct {
-	Branch     *string           `json:"branch"`
-	AutoDeploy *bool             `json:"auto_deploy"`
-	EnvVars    map[string]string `json:"env_vars"`
+	Branch      *string           `json:"branch"`
+	AutoDeploy  *bool             `json:"auto_deploy"`
+	EnvVars     map[string]string `json:"env_vars,omitempty"`
+	EnvVarItems []EnvVarItem      `json:"env_var_items,omitempty"`
 }
 
 type RollbackRequest struct {
 	TargetBuildID int `json:"target_build_id" binding:"required"`
 }
+
+type InspectRepoRequest struct {
+	RepoURL string `json:"repo_url" binding:"required"`
+}
+
+type InspectRepoResponse struct {
+	RepoURL         string       `json:"repo_url"`
+	DefaultBranch   string       `json:"default_branch"`
+	Branches        []string     `json:"branches"`
+	DetectedEnvVars []EnvVarItem `json:"detected_env_vars"`
+}
+

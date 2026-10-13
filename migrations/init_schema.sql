@@ -57,10 +57,13 @@ CREATE TABLE IF NOT EXISTS public.deployment_env_vars (
     deployment_id INT NOT NULL REFERENCES public.deployments(id) ON DELETE CASCADE,
     key TEXT NOT NULL,
     encrypted_value TEXT NOT NULL,
+    is_secret BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (deployment_id, key)
 );
+
+ALTER TABLE public.deployment_env_vars ADD COLUMN IF NOT EXISTS is_secret BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS idx_deployment_env_vars_deployment ON public.deployment_env_vars(deployment_id);
 

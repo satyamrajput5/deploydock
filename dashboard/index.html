@@ -390,9 +390,31 @@
   </div>
 
   <div class="modal-backdrop" id="deploy-modal" style="display: none;">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-wizard">
       <div class="modal-header">
-        <h2 class="modal-title">New Deployment</h2>
+        <div class="modal-header-nav">
+          <h2 class="modal-title">New Deployment</h2>
+          <div class="wizard-steps-indicator">
+            <div class="step-indicator-pill active" id="pill-step-1">
+              <span class="step-num">1</span>
+              <span class="step-label">Repository</span>
+            </div>
+            <div class="step-arrow">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="step-indicator-pill" id="pill-step-2">
+              <span class="step-num">2</span>
+              <span class="step-label">Branch</span>
+            </div>
+            <div class="step-arrow">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="step-indicator-pill" id="pill-step-3">
+              <span class="step-num">3</span>
+              <span class="step-label">Environment</span>
+            </div>
+          </div>
+        </div>
         <button class="modal-close-btn" id="modal-close-btn" aria-label="Close modal">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -401,19 +423,14 @@
           </svg>
         </button>
       </div>
+
       <form id="deploy-form">
-        <div class="modal-body">
+        <div class="modal-body wizard-step-panel" id="wizard-step-1">
           <div class="form-group">
             <label class="form-label" for="repo-url-input">GitHub Repository URL</label>
             <input type="url" id="repo-url-input" class="form-control" placeholder="https://github.com/owner/repository"
               required pattern="^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(\.git)?$">
-            <span class="form-hint">Supports repos with a Dockerfile or zero-config Node.js, Python, & Go.</span>
-          </div>
-
-          <div class="form-group" style="margin-top: 12px;">
-            <label class="form-label" for="branch-input">Branch</label>
-            <input type="text" id="branch-input" class="form-control" placeholder="main" value="main">
-            <span class="form-hint">Selected branch to track and deploy.</span>
+            <span class="form-hint">Supports public or accessible repositories. We will inspect branches and configuration automatically.</span>
           </div>
 
           <div class="quick-samples">
@@ -422,14 +439,112 @@
               <button type="button" class="chip-btn" data-url="https://github.com/render-examples/express-hello-world">Express.js</button>
               <button type="button" class="chip-btn" data-url="https://github.com/render-examples/flask-hello-world">Flask</button>
               <button type="button" class="chip-btn" data-url="https://github.com/render-examples/go-gin-web-server">Gin (Go)</button>
+              <button type="button" class="chip-btn" data-url="https://github.com/satyamrajput5/deploydock">DeployDock</button>
             </div>
           </div>
 
-          <div class="form-error-banner" id="deploy-error-banner" style="display: none;"></div>
+          <div class="form-error-banner" id="step1-error-banner" style="display: none;"></div>
         </div>
-        <div class="modal-footer">
+
+        <div class="modal-body wizard-step-panel" id="wizard-step-2" style="display: none;">
+          <div class="wizard-repo-summary">
+            <span class="repo-summary-label">Repository:</span>
+            <span class="repo-summary-val" id="step2-repo-summary-text"></span>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <div class="label-with-count">
+              <label class="form-label" for="branch-select">Select Branch</label>
+              <span class="count-tag" id="branch-count-tag">0 branches</span>
+            </div>
+            <select id="branch-select" class="form-control">
+              <option value="main">main</option>
+            </select>
+            <span class="form-hint">Selected branch to clone, build, and deploy.</span>
+          </div>
+
+          <div class="wizard-detected-notice" id="step2-detected-notice" style="display: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span id="step2-detected-text"></span>
+          </div>
+
+          <div class="form-error-banner" id="step2-error-banner" style="display: none;"></div>
+        </div>
+
+        <div class="modal-body wizard-step-panel" id="wizard-step-3" style="display: none;">
+          <div class="env-table-header-row">
+            <div class="env-header-meta">
+              <label class="form-label">Environment Variables</label>
+              <span class="form-hint">Variables auto-populated from configuration files or added manually.</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-env-var">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Variable</span>
+            </button>
+          </div>
+
+          <div class="env-vars-container">
+            <table class="env-vars-table" id="env-vars-table">
+              <thead>
+                <tr>
+                  <th style="width: 38%;">Name / Key</th>
+                  <th style="width: 38%;">Value</th>
+                  <th style="width: 14%; text-align: center;">Secret</th>
+                  <th style="width: 10%; text-align: center;"></th>
+                </tr>
+              </thead>
+              <tbody id="env-vars-tbody">
+              </tbody>
+            </table>
+            <div class="env-table-empty" id="env-table-empty" style="display: none;">
+              <span>No environment variables yet. Click "Add Variable" to add custom values.</span>
+            </div>
+          </div>
+
+          <div class="env-security-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>Variables marked as Secret are encrypted with AES-256 in PostgreSQL and never exposed in cleartext.</span>
+          </div>
+
+          <div class="form-error-banner" id="step3-error-banner" style="display: none;"></div>
+        </div>
+
+        <div class="modal-footer" id="wizard-footer-step-1">
           <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-step-1-next">
+            <span>Next: Select Branch</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        <div class="modal-footer" id="wizard-footer-step-2" style="display: none;">
+          <button type="button" class="btn btn-secondary" id="btn-step-2-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Back</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-step-2-next">
+            <span>Next: Environment</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+
+        <div class="modal-footer" id="wizard-footer-step-3" style="display: none;">
+          <button type="button" class="btn btn-secondary" id="btn-step-3-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>Back</span>
+          </button>
           <button type="submit" class="btn btn-primary" id="modal-submit-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             <span class="btn-text">Deploy</span>
           </button>
         </div>

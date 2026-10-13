@@ -6,8 +6,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const logsModal = document.getElementById('logs-modal');
   const deployForm = document.getElementById('deploy-form');
   const repoInput = document.getElementById('repo-url-input');
-  const branchInput = document.getElementById('branch-input');
-  const errorBanner = document.getElementById('deploy-error-banner');
+  const branchSelect = document.getElementById('branch-select');
+  const branchCountTag = document.getElementById('branch-count-tag');
+  const step2RepoSummaryText = document.getElementById('step2-repo-summary-text');
+  const step2DetectedNotice = document.getElementById('step2-detected-notice');
+  const step2DetectedText = document.getElementById('step2-detected-text');
+  const envVarsTbody = document.getElementById('env-vars-tbody');
+  const envTableEmpty = document.getElementById('env-table-empty');
+  const btnAddEnvVar = document.getElementById('btn-add-env-var');
+  const btnStep1Next = document.getElementById('btn-step-1-next');
+  const btnStep2Back = document.getElementById('btn-step-2-back');
+  const btnStep2Next = document.getElementById('btn-step-2-next');
+  const btnStep3Back = document.getElementById('btn-step-3-back');
+  const step1ErrorBanner = document.getElementById('step1-error-banner');
+  const step2ErrorBanner = document.getElementById('step2-error-banner');
+  const step3ErrorBanner = document.getElementById('step3-error-banner');
   const terminalText = document.getElementById('terminal-output-text');
   const logsTargetId = document.getElementById('logs-target-id');
   const sidebar = document.getElementById('app-sidebar');
@@ -122,11 +135,229 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  let currentDeployStep = 1;
+
+  function setWizardStep(step) {
+    currentDeployStep = step;
+
+    [1, 2, 3].forEach(s => {
+      const pill = document.getElementById(`pill-step-${s}`);
+      const panel = document.getElementById(`wizard-step-${s}`);
+      const footer = document.getElementById(`wizard-footer-step-${s}`);
+
+      if (pill) {
+        pill.classList.remove('active', 'completed');
+        if (s < step) {
+          pill.classList.add('completed');
+        } else if (s === step) {
+          pill.classList.add('active');
+        }
+      }
+
+      if (panel) {
+        panel.style.display = s === step ? 'flex' : 'none';
+      }
+
+      if (footer) {
+        footer.style.display = s === step ? 'flex' : 'none';
+      }
+    });
+
+    clearStepErrors();
+  }
+
+  function clearStepErrors() {
+    if (step1ErrorBanner) step1ErrorBanner.style.display = 'none';
+    if (step2ErrorBanner) step2ErrorBanner.style.display = 'none';
+    if (step3ErrorBanner) step3ErrorBanner.style.display = 'none';
+  }
+
+  function updateEnvTableEmptyState() {
+    if (!envVarsTbody || !envTableEmpty) return;
+    const rows = envVarsTbody.querySelectorAll('tr.env-var-row');
+    if (rows.length === 0) {
+      envTableEmpty.style.display = 'block';
+    } else {
+      envTableEmpty.style.display = 'none';
+    }
+  }
+
+  function addEnvVarRow(key = '', value = '', isSecret = false) {
+    if (!envVarsTbody) return null;
+
+    const tr = document.createElement('tr');
+    tr.className = 'env-var-row';
+
+    const tdKey = document.createElement('td');
+    const inputKey = document.createElement('input');
+    inputKey.type = 'text';
+    inputKey.className = 'env-key-input';
+    inputKey.placeholder = 'KEY_NAME';
+    inputKey.value = key;
+    tdKey.appendChild(inputKey);
+
+    const tdVal = document.createElement('td');
+    const inputVal = document.createElement('input');
+    inputVal.type = 'text';
+    inputVal.className = 'env-val-input';
+    inputVal.placeholder = 'Value';
+    inputVal.value = value;
+    tdVal.appendChild(inputVal);
+
+    const tdSecret = document.createElement('td');
+    tdSecret.className = 'secret-checkbox-wrap';
+    const checkSecret = document.createElement('input');
+    checkSecret.type = 'checkbox';
+    checkSecret.className = 'env-secret-checkbox';
+    checkSecret.checked = !!isSecret;
+    checkSecret.title = 'Encrypt in database';
+    tdSecret.appendChild(checkSecret);
+
+    inputKey.addEventListener('input', () => {
+      const u = inputKey.value.toUpperCase();
+      const secretKeywords = ['SECRET', 'PASSWORD', 'PASSWD', 'TOKEN', 'KEY', 'AUTH', 'PRIVATE', 'DATABASE', 'DB_', 'CONN', 'CREDENTIAL', 'APIKEY', 'API_KEY', 'CERT', 'JWT', 'ENCRYPT'];
+      const matches = secretKeywords.some(kw => u.includes(kw));
+      if (matches && !checkSecret.dataset.userTouched) {
+        checkSecret.checked = true;
+      }
+    });
+
+    checkSecret.addEventListener('change', () => {
+      checkSecret.dataset.userTouched = 'true';
+    });
+
+    const tdAction = document.createElement('td');
+    tdAction.style.textAlign = 'center';
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove-row';
+    btnDel.title = 'Remove variable';
+    btnDel.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    btnDel.addEventListener('click', () => {
+      tr.remove();
+      updateEnvTableEmptyState();
+    });
+    tdAction.appendChild(btnDel);
+
+    tr.appendChild(tdKey);
+    tr.appendChild(tdVal);
+    tr.appendChild(tdSecret);
+    tr.appendChild(tdAction);
+
+    envVarsTbody.appendChild(tr);
+    updateEnvTableEmptyState();
+    return inputKey;
+  }
+
+  async function handleStep1Next() {
+    clearStepErrors();
+    const url = repoInput.value.trim();
+    const githubRegex = /^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(\.git)?$/;
+    if (!url || !githubRegex.test(url)) {
+      step1ErrorBanner.textContent = 'Please enter a valid GitHub repository URL (e.g. https://github.com/owner/repo)';
+      step1ErrorBanner.style.display = 'block';
+      repoInput.focus();
+      return;
+    }
+
+    const btnNext = document.getElementById('btn-step-1-next');
+    const originalText = btnNext.innerHTML;
+    btnNext.disabled = true;
+    btnNext.innerHTML = `<span>Inspecting repository...</span>`;
+
+    try {
+      const res = await fetch('/repos/inspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: url })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to inspect repository');
+      }
+
+      if (step2RepoSummaryText) {
+        step2RepoSummaryText.textContent = data.repo_url;
+      }
+
+      if (branchSelect) {
+        branchSelect.innerHTML = '';
+        const branches = data.branches && data.branches.length > 0 ? data.branches : [data.default_branch || 'main'];
+        branches.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b;
+          opt.textContent = b;
+          if (b === data.default_branch) {
+            opt.selected = true;
+          }
+          branchSelect.appendChild(opt);
+        });
+      }
+
+      if (branchCountTag) {
+        const count = data.branches ? data.branches.length : 1;
+        branchCountTag.textContent = `${count} ${count === 1 ? 'branch' : 'branches'}`;
+      }
+
+      if (step2DetectedNotice && step2DetectedText) {
+        if (data.detected_env_vars && data.detected_env_vars.length > 0) {
+          step2DetectedText.textContent = `Discovered ${data.detected_env_vars.length} configuration variable(s) from repo files, auto-populated in Step 3.`;
+        } else {
+          step2DetectedText.textContent = `Repository inspected. Ready to configure environment variables in Step 3.`;
+        }
+        step2DetectedNotice.style.display = 'flex';
+      }
+
+      if (envVarsTbody) {
+        envVarsTbody.innerHTML = '';
+        if (data.detected_env_vars && data.detected_env_vars.length > 0) {
+          data.detected_env_vars.forEach(v => {
+            addEnvVarRow(v.key, v.value, v.is_secret);
+          });
+        }
+        updateEnvTableEmptyState();
+      }
+
+      setWizardStep(2);
+    } catch (err) {
+      step1ErrorBanner.textContent = err.message || 'Failed to inspect repository';
+      step1ErrorBanner.style.display = 'block';
+    } finally {
+      btnNext.disabled = false;
+      btnNext.innerHTML = originalText;
+    }
+  }
+
+  btnStep1Next?.addEventListener('click', handleStep1Next);
+
+  btnStep2Back?.addEventListener('click', () => {
+    setWizardStep(1);
+  });
+
+  btnStep2Next?.addEventListener('click', () => {
+    setWizardStep(3);
+  });
+
+  btnStep3Back?.addEventListener('click', () => {
+    setWizardStep(2);
+  });
+
+  btnAddEnvVar?.addEventListener('click', () => {
+    const input = addEnvVarRow('', '', false);
+    if (input) input.focus();
+  });
+
   function openDeployModal() {
     deployModal.style.display = 'flex';
-    errorBanner.style.display = 'none';
+    clearStepErrors();
+    setWizardStep(1);
     repoInput.value = '';
-    if (branchInput) branchInput.value = 'main';
+    if (branchSelect) branchSelect.innerHTML = '<option value="main">main</option>';
+    if (branchCountTag) branchCountTag.textContent = '0 branches';
+    if (envVarsTbody) envVarsTbody.innerHTML = '';
+    updateEnvTableEmptyState();
+    if (step2DetectedNotice) step2DetectedNotice.style.display = 'none';
     repoInput.focus();
   }
 
@@ -136,20 +367,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   deployForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (currentDeployStep === 1) {
+      handleStep1Next();
+      return;
+    }
+    if (currentDeployStep === 2) {
+      setWizardStep(3);
+      return;
+    }
+
+    clearStepErrors();
     const url = repoInput.value.trim();
-    const branch = branchInput ? (branchInput.value.trim() || 'main') : 'main';
-    if (!url) return;
+    const branch = branchSelect ? (branchSelect.value.trim() || 'main') : 'main';
+
+    const envVarItems = [];
+    if (envVarsTbody) {
+      const rows = envVarsTbody.querySelectorAll('tr.env-var-row');
+      rows.forEach(tr => {
+        const keyInput = tr.querySelector('.env-key-input');
+        const valInput = tr.querySelector('.env-val-input');
+        const secCheckbox = tr.querySelector('.env-secret-checkbox');
+        if (keyInput) {
+          const k = keyInput.value.trim();
+          if (k !== '') {
+            envVarItems.push({
+              key: k,
+              value: valInput ? valInput.value : '',
+              is_secret: secCheckbox ? secCheckbox.checked : false
+            });
+          }
+        }
+      });
+    }
 
     const submitBtn = document.getElementById('modal-submit-btn');
+    const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Deploying...</span>';
-    errorBanner.style.display = 'none';
 
     try {
       const res = await fetch('/deployments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repo_url: url, branch: branch })
+        body: JSON.stringify({
+          repo_url: url,
+          branch: branch,
+          env_var_items: envVarItems
+        })
       });
 
       const data = await res.json();
@@ -165,11 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateToDeployment(createdId);
       }
     } catch (err) {
-      errorBanner.textContent = err.message;
-      errorBanner.style.display = 'block';
+      step3ErrorBanner.textContent = err.message || 'Failed to submit deployment';
+      step3ErrorBanner.style.display = 'block';
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span class="btn-text">Deploy</span>';
+      submitBtn.innerHTML = originalText;
     }
   });
 
