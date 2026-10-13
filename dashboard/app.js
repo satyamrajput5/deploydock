@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
       detailStatsInterval = null;
     }
     detailView.style.display = 'none';
-    dashboardView.style.display = 'block';
+    dashboardView.style.display = 'flex';
     resizeAllCanvases();
 
     if (!dashboardStatsInterval) {
@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     dashboardView.style.display = 'none';
-    detailView.style.display = 'block';
+    detailView.style.display = 'flex';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 

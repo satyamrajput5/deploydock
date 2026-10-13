@@ -362,7 +362,14 @@ body {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+}
+
+.app-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
 }
 
 .card {
@@ -1200,7 +1207,6 @@ canvas {
 
 .detail-header-card {
   padding: 18px 20px;
-  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1326,13 +1332,11 @@ canvas {
 .detail-graphs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 14px;
 }
 
 .terminal-section {
   padding: 0;
-  margin-bottom: 16px;
   overflow: hidden;
   border: 1px solid var(--terminal-border);
   background: var(--terminal-bg);
