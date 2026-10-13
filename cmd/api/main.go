@@ -11,6 +11,7 @@ import (
 	"github.com/satyamrajput5/deploydock/internal/db"
 	"github.com/satyamrajput5/deploydock/internal/handlers"
 	"github.com/satyamrajput5/deploydock/internal/metrics"
+	"github.com/satyamrajput5/deploydock/internal/middleware"
 	"github.com/satyamrajput5/deploydock/internal/worker"
 )
 
@@ -62,6 +63,7 @@ func main() {
 	r.POST("/webhooks/github/:deploymentId", webhookH.HandleGitHub)
 
 	api := r.Group("/")
+	api.Use(middleware.AuthRequired(cfg.JWTSecret))
 	{
 		api.POST("/deployments", deployH.Create)
 		api.GET("/deployments", deployH.List)

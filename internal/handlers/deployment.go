@@ -151,6 +151,12 @@ func (h *DeploymentHandler) List(c *gin.Context) {
 		}
 	}
 
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	deployments := make([]models.Deployment, 0)
 	query := `
 		SELECT 
@@ -167,7 +173,7 @@ func (h *DeploymentHandler) List(c *gin.Context) {
 		ORDER BY d.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	err := h.db.SelectContext(c.Request.Context(), &deployments, query, limit, offset)
+	err := h.db.SelectContext(c.Request.Context(), &deployments, query, *userID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query deployments: " + err.Error()})
 		return
@@ -226,6 +232,12 @@ func (h *DeploymentHandler) Get(c *gin.Context) {
 		return
 	}
 
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var deployment models.Deployment
 	query := `
 		SELECT 
@@ -241,7 +253,7 @@ func (h *DeploymentHandler) Get(c *gin.Context) {
 		LEFT JOIN public.deployment_builds b ON d.current_build_id = b.id
 		WHERE d.id = $1
 	`
-	err = h.db.GetContext(c.Request.Context(), &deployment, query, deploymentID)
+	err = h.db.GetContext(c.Request.Context(), &deployment, query, deploymentID, *userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Deployment not found"})
@@ -468,8 +480,14 @@ func (h *DeploymentHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	query := `DELETE FROM public.deployments WHERE id = $1`
-	result, err := h.db.ExecContext(c.Request.Context(), query, deploymentID)
+	userID := getUserID(c)
+	if userID == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	query := `DELETE FROM public.deployments WHERE id = $1 AND user_id = $2`
+	result, err := h.db.ExecContext(c.Request.Context(), query, deploymentID, *userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete deployment: " + err.Error()})
 		return
@@ -667,5 +685,3 @@ func (h *DeploymentHandler) UpdateEnvVars(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Environment variables updated successfully"})
 }
-
-
