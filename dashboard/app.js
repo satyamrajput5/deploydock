@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const logsModal = document.getElementById('logs-modal');
   const deployForm = document.getElementById('deploy-form');
   const repoInput = document.getElementById('repo-url-input');
+  const branchInput = document.getElementById('branch-input');
   const errorBanner = document.getElementById('deploy-error-banner');
   const terminalText = document.getElementById('terminal-output-text');
   const logsTargetId = document.getElementById('logs-target-id');
@@ -16,7 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const sunIcon = document.getElementById('theme-sun-icon');
   const moonIcon = document.getElementById('theme-moon-icon');
 
+  const dashboardView = document.getElementById('view-dashboard');
+  const detailView = document.getElementById('view-deployment-detail');
+
   let activeLogsDeploymentId = null;
+  let modalLogsInterval = null;
+  let currentDetailId = null;
+  let detailLogsInterval = null;
+  let detailAutoscroll = true;
 
   function initTheme() {
     const savedTheme = localStorage.getItem('deploydock-theme') || 'dark';
@@ -66,12 +74,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       item.classList.add('active');
       if (window.innerWidth <= 768) {
         sidebar.classList.remove('open');
         backdrop.classList.remove('visible');
+      }
+
+      const href = item.getAttribute('href');
+      if (href === '#dashboard') {
+        window.location.hash = '';
+        history.pushState(null, '', '/');
+        showDashboardView();
       }
     });
   });
@@ -84,6 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('logs-close-btn')?.addEventListener('click', () => {
     logsModal.style.display = 'none';
     activeLogsDeploymentId = null;
+    if (modalLogsInterval) {
+      clearInterval(modalLogsInterval);
+      modalLogsInterval = null;
+    }
   });
 
   document.getElementById('btn-refresh-list')?.addEventListener('click', () => {
@@ -107,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deployModal.style.display = 'flex';
     errorBanner.style.display = 'none';
     repoInput.value = '';
+    if (branchInput) branchInput.value = 'main';
     repoInput.focus();
   }
 
@@ -117,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
   deployForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const url = repoInput.value.trim();
+    const branch = branchInput ? (branchInput.value.trim() || 'main') : 'main';
     if (!url) return;
 
     const submitBtn = document.getElementById('modal-submit-btn');
@@ -128,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/deployments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repo_url: url })
+        body: JSON.stringify({ repo_url: url, branch: branch })
       });
 
       const data = await res.json();
@@ -138,6 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       closeDeployModal();
       await fetchDeployments();
+
+      const createdId = data.deployment?.id;
+      if (createdId) {
+        navigateToDeployment(createdId);
+      }
     } catch (err) {
       errorBanner.textContent = err.message;
       errorBanner.style.display = 'block';
@@ -174,19 +200,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusClass = `status-${item.status || 'pending'}`;
       const portDisplay = item.port ? `:${item.port}` : '<span style="color: var(--fg-faint);">—</span>';
       const liveUrl = item.port 
-        ? `<a href="http://localhost:${item.port}" target="_blank" rel="noopener noreferrer">http://localhost:${item.port}</a>` 
+        ? `<a href="http://localhost:${item.port}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">http://localhost:${item.port}</a>` 
         : '<span style="color: var(--fg-faint);">—</span>';
 
       const created = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+      const branchName = item.branch || 'main';
+      const commitDisplay = item.commit_sha ? `<span class="commit-tag" title="Commit">${item.commit_sha.substring(0, 7)}</span>` : '';
+      const versionText = item.current_build_id ? `v${item.current_build_id}` : (item.build_number ? `v${item.build_number}` : 'v1');
 
       return `
-        <tr data-id="${item.id}">
+        <tr data-id="${item.id}" class="clickable-row" onclick="window.onRowClick(event, ${item.id})">
           <td class="cell-id">#${item.id}</td>
           <td>
-            <a class="cell-repo" href="${item.repo_url}" target="_blank" rel="noopener noreferrer" title="${item.repo_url}">
-              ${item.repo_url.replace('https://github.com/', '')}
-            </a>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <a class="cell-repo" href="${item.repo_url}" target="_blank" rel="noopener noreferrer" title="${item.repo_url}" onclick="event.stopPropagation()">
+                ${item.repo_url.replace('https://github.com/', '')}
+              </a>
+              <span class="branch-tag" title="Branch">${branchName}</span>
+              ${commitDisplay}
+            </div>
           </td>
+          <td><span class="version-tag">${versionText}</span></td>
           <td>
             <span class="status-badge ${statusClass}">${item.status}</span>
           </td>
@@ -194,7 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <td class="cell-url">${liveUrl}</td>
           <td style="color: var(--fg-muted); font-size: 0.8rem; font-family: var(--font-mono);">${created}</td>
           <td style="text-align: right;">
-            <div style="display: inline-flex; gap: 4px;">
+            <div style="display: inline-flex; gap: 4px;" onclick="event.stopPropagation()">
+              <button class="btn btn-secondary btn-sm" onclick="window.redeploy(${item.id})" title="Trigger build">Redeploy</button>
               <button class="btn btn-secondary btn-sm" onclick="window.viewLogs(${item.id})">Logs</button>
               <button class="btn btn-danger btn-sm" onclick="window.deleteDeployment(${item.id})">Delete</button>
             </div>
@@ -204,12 +239,235 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
+  window.onRowClick = function(event, id) {
+    if (event.target.closest('button') || event.target.closest('a')) return;
+    navigateToDeployment(id);
+  };
+
+  function navigateToDeployment(id) {
+    window.location.hash = `#/deployment/${id}`;
+  }
+
+  function showDashboardView() {
+    currentDetailId = null;
+    if (detailLogsInterval) {
+      clearInterval(detailLogsInterval);
+      detailLogsInterval = null;
+    }
+    detailView.style.display = 'none';
+    dashboardView.style.display = 'block';
+    resizeAllCanvases();
+  }
+
+  async function showDeploymentDetail(id) {
+    currentDetailId = id;
+    dashboardView.style.display = 'none';
+    detailView.style.display = 'block';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    await loadDeploymentDetailData(id);
+    initDetailCharts();
+
+    if (detailLogsInterval) clearInterval(detailLogsInterval);
+    fetchDetailLogs(id);
+    detailLogsInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        fetchDetailLogs(id);
+      }
+    }, 1500);
+  }
+
+  function handleRouting() {
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+
+    let match = hash.match(/#\/?deployment\/(\d+)/);
+    if (!match) {
+      match = path.match(/\/deployment\/(\d+)/);
+    }
+
+    if (match && match[1]) {
+      showDeploymentDetail(parseInt(match[1], 10));
+    } else {
+      showDashboardView();
+    }
+  }
+
+  window.addEventListener('hashchange', handleRouting);
+  window.addEventListener('popstate', handleRouting);
+
+  document.getElementById('btn-back-to-dashboard')?.addEventListener('click', () => {
+    window.location.hash = '';
+    history.pushState(null, '', '/');
+    showDashboardView();
+  });
+
+  async function loadDeploymentDetailData(id) {
+    try {
+      const res = await fetch(`/deployments/${id}`);
+      if (!res.ok) throw new Error('Deployment not found');
+      const data = await res.json();
+
+      document.getElementById('detail-id-tag').textContent = `#${data.id}`;
+      const repoName = data.repo_url.replace('https://github.com/', '');
+      document.getElementById('detail-repo-name').textContent = repoName;
+      document.getElementById('detail-branch-tag').textContent = data.branch || 'main';
+      const versionText = data.current_build_id ? `v${data.current_build_id}` : (data.build_number ? `v${data.build_number}` : 'v1');
+      document.getElementById('detail-version-tag').textContent = versionText;
+
+      const statusBadge = document.getElementById('detail-status-badge');
+      statusBadge.className = `status-badge status-${data.status || 'pending'}`;
+      statusBadge.textContent = data.status || 'pending';
+
+      document.getElementById('detail-port-val').textContent = data.port ? `:${data.port}` : '—';
+      document.getElementById('detail-container-val').textContent = data.container_id ? data.container_id.substring(0, 12) : '—';
+      document.getElementById('detail-commit-val').textContent = data.commit_sha ? data.commit_sha.substring(0, 7) : '—';
+      const ghLink = document.getElementById('detail-github-link');
+      ghLink.href = data.repo_url;
+      ghLink.textContent = data.repo_url;
+      document.getElementById('detail-created-val').textContent = data.created_at ? new Date(data.created_at).toLocaleString() : '—';
+
+      const visitBtn = document.getElementById('detail-visit-btn');
+      if (data.port) {
+        visitBtn.href = `http://localhost:${data.port}`;
+        visitBtn.style.display = 'inline-flex';
+      } else {
+        visitBtn.style.display = 'none';
+      }
+
+      const redeployBtn = document.getElementById('detail-redeploy-btn');
+      if (redeployBtn) {
+        redeployBtn.onclick = async () => {
+          await window.redeploy(data.id);
+          loadDeploymentDetailData(data.id);
+        };
+      }
+
+      const deleteBtn = document.getElementById('detail-delete-btn');
+      if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+          await window.deleteDeployment(data.id);
+          window.location.hash = '';
+          history.pushState(null, '', '/');
+          showDashboardView();
+        };
+      }
+
+      loadBuildsTable(id);
+    } catch (err) {
+      console.error('Failed loading detail:', err);
+    }
+  }
+
+  async function loadBuildsTable(id) {
+    try {
+      const res = await fetch(`/deployments/${id}/builds`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const builds = data.builds || [];
+      document.getElementById('detail-builds-count').textContent = builds.length;
+
+      const tbody = document.getElementById('detail-builds-tbody');
+      if (builds.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--fg-faint); padding:20px;">No builds recorded yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = builds.map(b => {
+        const commitTag = b.commit_sha ? `<span class="commit-tag">${b.commit_sha.substring(0, 7)}</span>` : '<span style="color:var(--fg-faint)">—</span>';
+        const errText = b.error_message || 'OK';
+        const isErr = b.status === 'failed' || !!b.error_message;
+
+        return `
+          <tr>
+            <td><span class="version-tag">#${b.id}</span></td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem;">${b.trigger_type}</td>
+            <td>${commitTag}</td>
+            <td><span class="status-badge status-${b.status}">${b.status}</span></td>
+            <td style="color:${isErr ? 'var(--danger)' : 'var(--fg-muted)'}; font-size:0.75rem; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${errText}">
+              ${errText}
+            </td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--fg-faint);">${b.created_at ? new Date(b.created_at).toLocaleTimeString() : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Failed loading builds:', err);
+    }
+  }
+
+  async function fetchDetailLogs(id) {
+    const textEl = document.getElementById('detail-terminal-text');
+    const countEl = document.getElementById('detail-log-count');
+    const container = document.getElementById('detail-terminal-container');
+
+    try {
+      const res = await fetch(`/deployments/${id}/logs`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch logs');
+
+      const logs = data.logs || [];
+      if (countEl) countEl.textContent = `${logs.length} lines`;
+
+      if (logs.length === 0) {
+        textEl.textContent = `Deployment #${id} queued.\nAwaiting build logs...`;
+        return;
+      }
+
+      textEl.textContent = logs.map(l => `[${new Date(l.created_at).toLocaleTimeString()}] ${l.message}`).join('\n');
+
+      if (detailAutoscroll && container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    } catch (err) {
+      textEl.textContent = `Error loading logs: ${err.message}`;
+    }
+  }
+
+  document.getElementById('detail-scroll-logs-btn')?.addEventListener('click', (e) => {
+    detailAutoscroll = !detailAutoscroll;
+    e.target.textContent = `Auto-scroll: ${detailAutoscroll ? 'ON' : 'OFF'}`;
+  });
+
+  document.getElementById('detail-clear-logs-btn')?.addEventListener('click', () => {
+    const textEl = document.getElementById('detail-terminal-text');
+    if (textEl) textEl.textContent = '';
+    const countEl = document.getElementById('detail-log-count');
+    if (countEl) countEl.textContent = '0 lines';
+  });
+
+  document.getElementById('detail-refresh-logs-btn')?.addEventListener('click', () => {
+    if (currentDetailId) fetchDetailLogs(currentDetailId);
+  });
+
+  window.redeploy = async function(id) {
+    try {
+      const res = await fetch(`/deployments/${id}/redeploy`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to trigger redeploy');
+      await fetchDeployments();
+      if (currentDetailId === id) {
+        loadDeploymentDetailData(id);
+      }
+    } catch (err) {
+      alert(`Error triggering redeploy: ${err.message}`);
+    }
+  };
+
   window.viewLogs = async function(id) {
     activeLogsDeploymentId = id;
     logsTargetId.textContent = `#${id}`;
-    terminalText.textContent = 'Loading...';
+    terminalText.textContent = 'Loading live logs...';
     logsModal.style.display = 'flex';
     await fetchLogs(id);
+
+    if (modalLogsInterval) clearInterval(modalLogsInterval);
+    modalLogsInterval = setInterval(() => {
+      if (activeLogsDeploymentId === id && logsModal.style.display !== 'none') {
+        fetchLogs(id);
+      }
+    }, 1500);
   };
 
   async function fetchLogs(id) {
@@ -257,6 +515,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupCanvasChart('ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', (val) => {
       const el = document.getElementById('ram-current-val');
+      if (el) el.textContent = `${Math.round(val * 16)} MB`;
+    });
+  }
+
+  let detailChartsInitialized = false;
+  function initDetailCharts() {
+    if (detailChartsInitialized) return;
+    detailChartsInitialized = true;
+
+    setupCanvasChart('detail-cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', (val) => {
+      const el = document.getElementById('detail-cpu-pct');
+      if (el) el.textContent = `${val.toFixed(1)}%`;
+    });
+
+    setupCanvasChart('detail-ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', (val) => {
+      const el = document.getElementById('detail-ram-val');
       if (el) el.textContent = `${Math.round(val * 16)} MB`;
     });
   }
@@ -397,5 +671,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   fetchDeployments();
   initCharts();
+  handleRouting();
   setInterval(fetchDeployments, 5000);
 });

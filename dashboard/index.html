@@ -116,121 +116,271 @@
       </aside>
 
       <main class="main-content">
-        <section class="metrics-grid">
-          <div class="card metric-card" id="budget-card">
-            <div class="card-body budget-body">
-              <div class="donut-chart-container">
-                <svg class="donut-svg" viewBox="0 0 120 120">
-                  <circle class="donut-bg" cx="60" cy="60" r="48" stroke-width="10"></circle>
-                  <circle class="donut-progress" id="budget-donut-bar" cx="60" cy="60" r="48" stroke-width="10"
-                    stroke-dasharray="301.59" stroke-dashoffset="153.8"></circle>
-                  <text class="donut-center-symbol" x="60" y="60" text-anchor="middle"
-                    dominant-baseline="central">$</text>
-                </svg>
-              </div>
-              <div class="budget-legend">
-                <div class="legend-item">
-                  <span class="legend-badge orange-badge"></span>
-                  <div class="legend-text">
-                    <span class="legend-title">Est monthly billing</span>
-                    <span class="legend-value" id="val-est-billing">$24.50</span>
+        <div id="view-dashboard" class="app-view">
+          <section class="metrics-grid">
+            <div class="card metric-card" id="budget-card">
+              <div class="card-body budget-body">
+                <div class="donut-chart-container">
+                  <svg class="donut-svg" viewBox="0 0 120 120">
+                    <circle class="donut-bg" cx="60" cy="60" r="48" stroke-width="10"></circle>
+                    <circle class="donut-progress" id="budget-donut-bar" cx="60" cy="60" r="48" stroke-width="10"
+                      stroke-dasharray="301.59" stroke-dashoffset="153.8"></circle>
+                    <text class="donut-center-symbol" x="60" y="60" text-anchor="middle"
+                      dominant-baseline="central">$</text>
+                  </svg>
+                </div>
+                <div class="budget-legend">
+                  <div class="legend-item">
+                    <span class="legend-badge orange-badge"></span>
+                    <div class="legend-text">
+                      <span class="legend-title">Est monthly billing</span>
+                      <span class="legend-value" id="val-est-billing">$24.50</span>
+                    </div>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-badge green-badge"></span>
+                    <div class="legend-text">
+                      <span class="legend-title">Budget</span>
+                      <span class="legend-value" id="val-budget-total">$50.00</span>
+                    </div>
                   </div>
                 </div>
-                <div class="legend-item">
-                  <span class="legend-badge green-badge"></span>
-                  <div class="legend-text">
-                    <span class="legend-title">Budget</span>
-                    <span class="legend-value" id="val-budget-total">$50.00</span>
-                  </div>
+              </div>
+              <div class="card-footer-label">
+                <span>BUDGET</span>
+              </div>
+            </div>
+
+            <div class="card metric-card" id="cpu-card">
+              <div class="chart-container">
+                <canvas id="cpu-chart-canvas"></canvas>
+              </div>
+              <div class="card-footer-label">
+                <span>AVG CPU UTIL GRAPH</span>
+                <span class="metric-tag" id="cpu-current-pct">18.4%</span>
+              </div>
+            </div>
+
+            <div class="card metric-card" id="ram-card">
+              <div class="chart-container">
+                <canvas id="ram-chart-canvas"></canvas>
+              </div>
+              <div class="card-footer-label">
+                <span>AVG RAM UTIL GRAPH</span>
+                <span class="metric-tag" id="ram-current-val">248 MB</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card deployments-section" id="deployments-table-card">
+            <div class="table-header-bar">
+              <div class="table-title-group">
+                <h1 class="table-title">Recent Deployments</h1>
+                <span class="count-tag" id="deployment-count-badge">0</span>
+              </div>
+              <div class="table-actions">
+                <button class="btn btn-secondary" id="btn-refresh-list" title="Refresh list">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                    <path d="M16 21h5v-5"></path>
+                  </svg>
+                  <span>Refresh</span>
+                </button>
+                <button class="btn btn-primary" id="btn-open-deploy-modal">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>New Deployment</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="deployments-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Repository URL</th>
+                    <th style="width: 95px;">Version</th>
+                    <th style="width: 110px;">Status</th>
+                    <th style="width: 85px;">Port</th>
+                    <th style="width: 150px;">URL</th>
+                    <th style="width: 120px;">Created At</th>
+                    <th style="width: 150px; text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="deployments-tbody">
+                </tbody>
+              </table>
+
+              <div class="table-empty-state" id="table-empty-state" style="display: none;">
+                <div class="empty-icon-wrap">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                    <path d="M3 9h18"></path>
+                    <path d="M9 21V9"></path>
+                  </svg>
                 </div>
+                <h3>No deployments yet</h3>
+                <p>Submit a GitHub repository to trigger the build pipeline.</p>
+                <button class="btn btn-primary btn-sm" id="btn-empty-deploy">Deploy App</button>
               </div>
             </div>
-            <div class="card-footer-label">
-              <span>BUDGET</span>
-            </div>
-          </div>
+          </section>
+        </div>
 
-          <div class="card metric-card" id="cpu-card">
-            <div class="chart-container">
-              <canvas id="cpu-chart-canvas"></canvas>
-            </div>
-            <div class="card-footer-label">
-              <span>AVG CPU UTIL GRAPH</span>
-              <span class="metric-tag" id="cpu-current-pct">18.4%</span>
-            </div>
-          </div>
-
-          <div class="card metric-card" id="ram-card">
-            <div class="chart-container">
-              <canvas id="ram-chart-canvas"></canvas>
-            </div>
-            <div class="card-footer-label">
-              <span>AVG RAM UTIL GRAPH</span>
-              <span class="metric-tag" id="ram-current-val">248 MB</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="card deployments-section" id="deployments-table-card">
-          <div class="table-header-bar">
-            <div class="table-title-group">
-              <h1 class="table-title">Recent Deployments</h1>
-              <span class="count-tag" id="deployment-count-badge">0</span>
-            </div>
-            <div class="table-actions">
-              <button class="btn btn-secondary" id="btn-refresh-list" title="Refresh list">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                  <path d="M3 3v5h5"></path>
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                  <path d="M16 21h5v-5"></path>
+        <div id="view-deployment-detail" class="app-view" style="display: none;">
+          <div class="detail-header-card card">
+            <div class="detail-breadcrumb-row">
+              <button class="btn btn-secondary btn-sm" id="btn-back-to-dashboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12"></line>
+                  <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                <span>Refresh</span>
+                <span>Back to Overview</span>
               </button>
-              <button class="btn btn-primary" id="btn-open-deploy-modal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span>New Deployment</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="table-responsive">
-            <table class="data-table" id="deployments-table">
-              <thead>
-                <tr>
-                  <th style="width: 70px;">ID</th>
-                  <th>Repository URL</th>
-                  <th style="width: 120px;">Status</th>
-                  <th style="width: 90px;">Port</th>
-                  <th style="width: 160px;">URL</th>
-                  <th style="width: 130px;">Created At</th>
-                  <th style="width: 120px; text-align: right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="deployments-tbody">
-              </tbody>
-            </table>
-
-            <div class="table-empty-state" id="table-empty-state" style="display: none;">
-              <div class="empty-icon-wrap">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                  <path d="M3 9h18"></path>
-                  <path d="M9 21V9"></path>
-                </svg>
+              <div class="live-indicator-pill">
+                <span class="live-dot-pulse"></span>
+                <span class="live-label">LIVE METRICS</span>
               </div>
-              <h3>No deployments yet</h3>
-              <p>Submit a GitHub repository to trigger the build pipeline.</p>
-              <button class="btn btn-primary btn-sm" id="btn-empty-deploy">Deploy App</button>
+            </div>
+
+            <div class="detail-title-row">
+              <div class="detail-heading-group">
+                <span class="detail-id-badge" id="detail-id-tag">#--</span>
+                <h1 class="detail-repo-name" id="detail-repo-name">Repository</h1>
+                <span class="branch-tag" id="detail-branch-tag">main</span>
+                <span class="version-tag" id="detail-version-tag">v1</span>
+                <span class="status-badge" id="detail-status-badge">pending</span>
+              </div>
+
+              <div class="detail-actions-group">
+                <a class="btn btn-primary btn-sm" id="detail-visit-btn" target="_blank" rel="noopener noreferrer" style="display: none;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  <span>Open App</span>
+                </a>
+                <button class="btn btn-secondary btn-sm" id="detail-redeploy-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+                    <path d="M16 21h5v-5"></path>
+                  </svg>
+                  <span>Redeploy</span>
+                </button>
+                <button class="btn btn-danger btn-sm" id="detail-delete-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="detail-meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Assigned Port</span>
+                <span class="meta-value" id="detail-port-val">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Container ID</span>
+                <span class="meta-value" id="detail-container-val">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Commit SHA</span>
+                <span class="meta-value" id="detail-commit-val">—</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">GitHub Repository</span>
+                <a class="meta-value meta-link" id="detail-github-link" target="_blank" rel="noopener noreferrer">—</a>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Webhook Trigger</span>
+                <span class="meta-value" id="detail-webhook-val">Auto-Deploy ON</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Created At</span>
+                <span class="meta-value" id="detail-created-val">—</span>
+              </div>
             </div>
           </div>
-        </section>
+
+          <div class="detail-graphs-grid">
+            <div class="card metric-card" id="detail-cpu-card">
+              <div class="chart-container">
+                <canvas id="detail-cpu-chart-canvas"></canvas>
+              </div>
+              <div class="card-footer-label">
+                <span>CPU UTILIZATION</span>
+                <span class="metric-tag" id="detail-cpu-pct">0.0%</span>
+              </div>
+            </div>
+
+            <div class="card metric-card" id="detail-ram-card">
+              <div class="chart-container">
+                <canvas id="detail-ram-chart-canvas"></canvas>
+              </div>
+              <div class="card-footer-label">
+                <span>RAM UTILIZATION</span>
+                <span class="metric-tag" id="detail-ram-val">0 MB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card terminal-section" id="detail-logs-card">
+            <div class="terminal-toolbar">
+              <div class="terminal-title-group">
+                <span class="live-dot-pulse"></span>
+                <span class="terminal-label">Live Output Stream</span>
+                <span class="log-count-pill" id="detail-log-count">0 lines</span>
+              </div>
+              <div class="terminal-toolbar-actions">
+                <button class="btn btn-secondary btn-xs" id="detail-clear-logs-btn">Clear</button>
+                <button class="btn btn-secondary btn-xs" id="detail-scroll-logs-btn">Auto-scroll: ON</button>
+                <button class="btn btn-secondary btn-xs" id="detail-refresh-logs-btn">Refresh</button>
+              </div>
+            </div>
+            <div class="terminal-container" id="detail-terminal-container">
+              <pre class="terminal-output" id="detail-terminal-text">Connecting to deployment stream...</pre>
+            </div>
+          </div>
+
+          <div class="card deployments-section" id="detail-builds-card">
+            <div class="table-header-bar">
+              <div class="table-title-group">
+                <h2 class="table-title">Build Revisions</h2>
+                <span class="count-tag" id="detail-builds-count">0</span>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="detail-builds-table">
+                <thead>
+                  <tr>
+                    <th style="width: 90px;">Build ID</th>
+                    <th style="width: 100px;">Trigger</th>
+                    <th style="width: 110px;">Commit</th>
+                    <th style="width: 120px;">Status</th>
+                    <th>Error / Notes</th>
+                    <th style="width: 140px;">Created At</th>
+                  </tr>
+                </thead>
+                <tbody id="detail-builds-tbody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   </div>
@@ -256,12 +406,18 @@
             <span class="form-hint">Supports repos with a Dockerfile or zero-config Node.js, Python, & Go.</span>
           </div>
 
+          <div class="form-group" style="margin-top: 12px;">
+            <label class="form-label" for="branch-input">Branch</label>
+            <input type="text" id="branch-input" class="form-control" placeholder="main" value="main">
+            <span class="form-hint">Selected branch to track and deploy.</span>
+          </div>
+
           <div class="quick-samples">
             <span class="samples-label">Presets</span>
             <div class="sample-chips">
-              <button type="button" class="chip-btn" data-url="https://github.com/expressjs/express">Express.js</button>
-              <button type="button" class="chip-btn" data-url="https://github.com/pallets/flask">Flask</button>
-              <button type="button" class="chip-btn" data-url="https://github.com/gin-gonic/gin">Gin (Go)</button>
+              <button type="button" class="chip-btn" data-url="https://github.com/render-examples/express-hello-world">Express.js</button>
+              <button type="button" class="chip-btn" data-url="https://github.com/render-examples/flask-hello-world">Flask</button>
+              <button type="button" class="chip-btn" data-url="https://github.com/render-examples/go-gin-web-server">Gin (Go)</button>
             </div>
           </div>
 
