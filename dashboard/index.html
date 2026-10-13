@@ -1,334 +1,1204 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeployDock — PaaS Console</title>
+    <meta
+      name="description"
+      content="DeployDock PaaS Console. Monitor deployments, resource utilization, and budget allocations."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeployDock — PaaS Console</title>
-  <meta name="description"
-    content="DeployDock PaaS Console. Monitor deployments, resource utilization, and budget allocations.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
-</head>
+  <body>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-<body>
-  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-
-  <div class="app-layout">
-    <header class="top-header" id="main-header">
-      <div class="header-left">
-        <button class="btn-icon" id="sidebar-toggle" aria-label="Toggle navigation" title="Toggle menu">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="6" x2="20" y2="6"></line>
-            <line x1="4" y1="12" x2="20" y2="12"></line>
-            <line x1="4" y1="18" x2="20" y2="18"></line>
-          </svg>
-        </button>
-        <div class="brand">
-          <div class="brand-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-              <path d="M7 7h10"></path>
-              <path d="M7 12h10"></path>
-              <path d="M7 17h10"></path>
+    <div class="app-layout">
+      <header class="top-header" id="main-header">
+        <div class="header-left">
+          <button
+            class="btn-icon"
+            id="sidebar-toggle"
+            aria-label="Toggle navigation"
+            title="Toggle menu"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="4" y1="6" x2="20" y2="6"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="18" x2="20" y2="18"></line>
             </svg>
-          </div>
-          <span class="brand-name">DeployDock</span>
-        </div>
-      </div>
-
-      <div class="header-right">
-        <button class="btn-icon theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle theme" title="Toggle theme">
-          <svg class="sun-icon" id="theme-sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="m4.93 4.93 1.41 1.41"></path>
-            <path d="m17.66 17.66 1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="m6.34 17.66-1.41 1.41"></path>
-            <path d="m19.07 4.93-1.41 1.41"></path>
-          </svg>
-          <svg class="moon-icon" id="theme-moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            style="display: none;">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-          </svg>
-        </button>
-
-        <div class="user-greeting" id="user-greeting-box">
-          <span class="greeting-text">Hello, <span class="user-name" id="user-display-name">User</span></span>
-          <div class="user-avatar" id="user-avatar-badge" title="User Account">
-            <span>U</span>
+          </button>
+          <div class="brand">
+            <div class="brand-icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M7 7h10"></path>
+                <path d="M7 12h10"></path>
+                <path d="M7 17h10"></path>
+              </svg>
+            </div>
+            <span class="brand-name">DeployDock</span>
           </div>
         </div>
-      </div>
-    </header>
 
-    <div class="layout-body">
-      <aside class="sidebar" id="app-sidebar">
-        <nav class="nav-menu">
-          <a href="#dashboard" class="nav-item active" id="nav-dashboard" title="Dashboard">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-              stroke-linecap="round" stroke-linejoin="round">
-              <rect width="7" height="9" x="3" y="3" rx="1"></rect>
-              <rect width="7" height="5" x="14" y="3" rx="1"></rect>
-              <rect width="7" height="9" x="14" y="12" rx="1"></rect>
-              <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+        <div class="header-right">
+          <button
+            class="btn-icon theme-toggle-btn"
+            id="theme-toggle-btn"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            <svg
+              class="sun-icon"
+              id="theme-sun-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m6.34 17.66-1.41 1.41"></path>
+              <path d="m19.07 4.93-1.41 1.41"></path>
             </svg>
-            <span class="nav-label">Dashboard</span>
-          </a>
-          <a href="#deployments" class="nav-item" id="nav-deployments" title="Deployments">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-              <polyline points="2 17 12 22 22 17"></polyline>
-              <polyline points="2 12 12 17 22 12"></polyline>
+            <svg
+              class="moon-icon"
+              id="theme-moon-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="display: none"
+            >
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
             </svg>
-            <span class="nav-label">Deployments</span>
-          </a>
-          <a href="#budget" class="nav-item" id="nav-budget" title="Budget">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
-              <path d="M12 18V6"></path>
-            </svg>
-            <span class="nav-label">Budget</span>
-          </a>
-        </nav>
+          </button>
 
-        <div class="sidebar-status-card">
-          <div class="status-indicator-row">
-            <span class="status-dot"></span>
-            <span class="status-label">Engine Ready</span>
+          <div class="user-greeting" id="user-greeting-box">
+            <span class="greeting-text"
+              >Hello,
+              <span class="user-name" id="user-display-name">User</span></span
+            >
+            <div
+              class="user-avatar"
+              id="user-avatar-badge"
+              title="User Account"
+            >
+              <span>U</span>
+            </div>
           </div>
-          <div class="status-detail">Pool 4000–4999</div>
         </div>
-      </aside>
+      </header>
 
-      <main class="main-content">
-        <section class="metrics-grid">
-          <div class="card metric-card" id="budget-card">
-            <div class="card-body budget-body">
-              <div class="donut-chart-container">
-                <svg class="donut-svg" viewBox="0 0 120 120">
-                  <circle class="donut-bg" cx="60" cy="60" r="48" stroke-width="10"></circle>
-                  <circle class="donut-progress" id="budget-donut-bar" cx="60" cy="60" r="48" stroke-width="10"
-                    stroke-dasharray="301.59" stroke-dashoffset="153.8"></circle>
-                  <text class="donut-center-symbol" x="60" y="60" text-anchor="middle"
-                    dominant-baseline="central">$</text>
-                </svg>
-              </div>
-              <div class="budget-legend">
-                <div class="legend-item">
-                  <span class="legend-badge orange-badge"></span>
-                  <div class="legend-text">
-                    <span class="legend-title">Est monthly billing</span>
-                    <span class="legend-value" id="val-est-billing">$24.50</span>
+      <div class="layout-body">
+        <aside class="sidebar" id="app-sidebar">
+          <nav class="nav-menu">
+            <a
+              href="#dashboard"
+              class="nav-item active"
+              id="nav-dashboard"
+              title="Dashboard"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+                <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+                <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+                <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+              </svg>
+              <span class="nav-label">Dashboard</span>
+            </a>
+            <a
+              href="#deployments"
+              class="nav-item"
+              id="nav-deployments"
+              title="Deployments"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <span class="nav-label">Deployments</span>
+            </a>
+            <a href="#budget" class="nav-item" id="nav-budget" title="Budget">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+                <path d="M12 18V6"></path>
+              </svg>
+              <span class="nav-label">Budget</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-status-card">
+            <div class="status-indicator-row">
+              <span class="status-dot"></span>
+              <span class="status-label">Engine Ready</span>
+            </div>
+            <div class="status-detail">Pool 4000–4999</div>
+          </div>
+        </aside>
+
+        <main class="main-content">
+          <div id="view-dashboard" class="app-view">
+            <section class="metrics-grid">
+              <div class="card metric-card" id="budget-card">
+                <div class="card-body budget-body">
+                  <div class="donut-chart-container">
+                    <svg class="donut-svg" viewBox="0 0 120 120">
+                      <circle
+                        class="donut-bg"
+                        cx="60"
+                        cy="60"
+                        r="48"
+                        stroke-width="10"
+                      ></circle>
+                      <circle
+                        class="donut-progress"
+                        id="budget-donut-bar"
+                        cx="60"
+                        cy="60"
+                        r="48"
+                        stroke-width="10"
+                        stroke-dasharray="301.59"
+                        stroke-dashoffset="153.8"
+                      ></circle>
+                      <text
+                        class="donut-center-symbol"
+                        x="60"
+                        y="60"
+                        text-anchor="middle"
+                        dominant-baseline="central"
+                      >
+                        $
+                      </text>
+                    </svg>
+                  </div>
+                  <div class="budget-legend">
+                    <div class="legend-item">
+                      <span class="legend-badge orange-badge"></span>
+                      <div class="legend-text">
+                        <span class="legend-title">Est monthly billing</span>
+                        <span class="legend-value" id="val-est-billing"
+                          >$24.50</span
+                        >
+                      </div>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-badge green-badge"></span>
+                      <div class="legend-text">
+                        <span class="legend-title">Budget</span>
+                        <span class="legend-value" id="val-budget-total"
+                          >$50.00</span
+                        >
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="legend-item">
-                  <span class="legend-badge green-badge"></span>
-                  <div class="legend-text">
-                    <span class="legend-title">Budget</span>
-                    <span class="legend-value" id="val-budget-total">$50.00</span>
+                <div class="card-footer-label">
+                  <span>BUDGET</span>
+                </div>
+              </div>
+
+              <div class="card metric-card" id="cpu-card">
+                <div class="chart-container">
+                  <canvas id="cpu-chart-canvas"></canvas>
+                </div>
+                <div class="card-footer-label">
+                  <span>AVG CPU UTIL GRAPH</span>
+                  <span class="metric-tag" id="cpu-current-pct">18.4%</span>
+                </div>
+              </div>
+
+              <div class="card metric-card" id="ram-card">
+                <div class="chart-container">
+                  <canvas id="ram-chart-canvas"></canvas>
+                </div>
+                <div class="card-footer-label">
+                  <span>AVG RAM UTIL GRAPH</span>
+                  <span class="metric-tag" id="ram-current-val">248 MB</span>
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="card deployments-section"
+              id="deployments-table-card"
+            >
+              <div class="table-header-bar">
+                <div class="table-title-group">
+                  <h1 class="table-title">Recent Deployments</h1>
+                  <span class="count-tag" id="deployment-count-badge">0</span>
+                </div>
+                <div class="table-actions">
+                  <button
+                    class="btn btn-secondary"
+                    id="btn-refresh-list"
+                    title="Refresh list"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                      ></path>
+                      <path d="M3 3v5h5"></path>
+                      <path
+                        d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"
+                      ></path>
+                      <path d="M16 21h5v-5"></path>
+                    </svg>
+                    <span>Refresh</span>
+                  </button>
+                  <button class="btn btn-primary" id="btn-open-deploy-modal">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>New Deployment</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table" id="deployments-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 70px">ID</th>
+                      <th>Repository URL</th>
+                      <th style="width: 95px">Version</th>
+                      <th style="width: 110px">Status</th>
+                      <th style="width: 85px">Port</th>
+                      <th style="width: 150px">URL</th>
+                      <th style="width: 120px">Created At</th>
+                      <th style="width: 150px; text-align: right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deployments-tbody"></tbody>
+                </table>
+
+                <div
+                  class="table-empty-state"
+                  id="table-empty-state"
+                  style="display: none"
+                >
+                  <div class="empty-icon-wrap">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                      <path d="M3 9h18"></path>
+                      <path d="M9 21V9"></path>
+                    </svg>
                   </div>
+                  <h3>No deployments yet</h3>
+                  <p>
+                    Submit a GitHub repository to trigger the build pipeline.
+                  </p>
+                  <button class="btn btn-primary btn-sm" id="btn-empty-deploy">
+                    Deploy App
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div
+            id="view-deployment-detail"
+            class="app-view"
+            style="display: none"
+          >
+            <div class="detail-header-card card">
+              <div class="detail-breadcrumb-row">
+                <button
+                  class="btn btn-secondary btn-sm"
+                  id="btn-back-to-dashboard"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                  <span>Back to Overview</span>
+                </button>
+                <div class="live-indicator-pill">
+                  <span class="live-dot-pulse"></span>
+                  <span class="live-label">LIVE METRICS</span>
+                </div>
+              </div>
+
+              <div class="detail-title-row">
+                <div class="detail-heading-group">
+                  <span class="detail-id-badge" id="detail-id-tag">#--</span>
+                  <h1 class="detail-repo-name" id="detail-repo-name">
+                    Repository
+                  </h1>
+                  <span class="branch-tag" id="detail-branch-tag">main</span>
+                  <span class="version-tag" id="detail-version-tag">v1</span>
+                  <span class="status-badge" id="detail-status-badge"
+                    >pending</span
+                  >
+                </div>
+
+                <div class="detail-actions-group">
+                  <a
+                    class="btn btn-primary btn-sm"
+                    id="detail-visit-btn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="display: none"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                      ></path>
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    <span>Open App</span>
+                  </a>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    id="detail-env-vars-btn"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect
+                        x="2"
+                        y="2"
+                        width="20"
+                        height="8"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <rect
+                        x="2"
+                        y="14"
+                        width="20"
+                        height="8"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                      <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                    </svg>
+                    <span>Environment Variables</span>
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    id="detail-redeploy-btn"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path
+                        d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                      ></path>
+                      <path d="M3 3v5h5"></path>
+                      <path
+                        d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"
+                      ></path>
+                      <path d="M16 21h5v-5"></path>
+                    </svg>
+                    <span>Redeploy</span>
+                  </button>
+                  <button class="btn btn-danger btn-sm" id="detail-delete-btn">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path
+                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                      ></path>
+                    </svg>
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="detail-meta-grid">
+                <div class="meta-item">
+                  <span class="meta-label">Assigned Port</span>
+                  <span class="meta-value" id="detail-port-val">—</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Container ID</span>
+                  <span class="meta-value" id="detail-container-val">—</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Commit SHA</span>
+                  <span class="meta-value" id="detail-commit-val">—</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">GitHub Repository</span>
+                  <a
+                    class="meta-value meta-link"
+                    id="detail-github-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >—</a
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Webhook Trigger</span>
+                  <span class="meta-value" id="detail-webhook-val"
+                    >Auto-Deploy ON</span
+                  >
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Created At</span>
+                  <span class="meta-value" id="detail-created-val">—</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Docker Status</span>
+                  <span class="meta-value" id="detail-docker-val">—</span>
                 </div>
               </div>
             </div>
-            <div class="card-footer-label">
-              <span>BUDGET</span>
+
+            <div class="detail-graphs-grid">
+              <div class="card metric-card" id="detail-cpu-card">
+                <div class="chart-container">
+                  <canvas id="detail-cpu-chart-canvas"></canvas>
+                </div>
+                <div class="card-footer-label">
+                  <span>CPU UTILIZATION</span>
+                  <span class="metric-tag" id="detail-cpu-pct">0.0%</span>
+                </div>
+              </div>
+
+              <div class="card metric-card" id="detail-ram-card">
+                <div class="chart-container">
+                  <canvas id="detail-ram-chart-canvas"></canvas>
+                </div>
+                <div class="card-footer-label">
+                  <span>RAM UTILIZATION</span>
+                  <span class="metric-tag" id="detail-ram-val">0 MB</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card terminal-section" id="detail-logs-card">
+              <div class="terminal-toolbar">
+                <div class="terminal-title-group">
+                  <span class="live-dot-pulse"></span>
+                  <span class="terminal-label">Live Output Stream</span>
+                  <span class="log-count-pill" id="detail-log-count"
+                    >0 lines</span
+                  >
+                </div>
+                <div class="terminal-toolbar-actions">
+                  <button
+                    class="btn btn-secondary btn-xs"
+                    id="detail-clear-logs-btn"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-xs"
+                    id="detail-scroll-logs-btn"
+                  >
+                    Auto-scroll: ON
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-xs"
+                    id="detail-refresh-logs-btn"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+              <div class="terminal-container" id="detail-terminal-container">
+                <pre class="terminal-output" id="detail-terminal-text">
+Connecting to deployment stream...</pre
+                >
+              </div>
+            </div>
+
+            <div class="card deployments-section" id="detail-builds-card">
+              <div class="table-header-bar">
+                <div class="table-title-group">
+                  <h2 class="table-title">Build Revisions</h2>
+                  <span class="count-tag" id="detail-builds-count">0</span>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" id="detail-builds-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 90px">Build ID</th>
+                      <th style="width: 100px">Trigger</th>
+                      <th style="width: 110px">Commit</th>
+                      <th style="width: 120px">Status</th>
+                      <th>Error / Notes</th>
+                      <th style="width: 140px">Created At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detail-builds-tbody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
+        </main>
+      </div>
+    </div>
 
-          <div class="card metric-card" id="cpu-card">
-            <div class="chart-container">
-              <canvas id="cpu-chart-canvas"></canvas>
-            </div>
-            <div class="card-footer-label">
-              <span>AVG CPU UTIL GRAPH</span>
-              <span class="metric-tag" id="cpu-current-pct">18.4%</span>
-            </div>
-          </div>
-
-          <div class="card metric-card" id="ram-card">
-            <div class="chart-container">
-              <canvas id="ram-chart-canvas"></canvas>
-            </div>
-            <div class="card-footer-label">
-              <span>AVG RAM UTIL GRAPH</span>
-              <span class="metric-tag" id="ram-current-val">248 MB</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="card deployments-section" id="deployments-table-card">
-          <div class="table-header-bar">
-            <div class="table-title-group">
-              <h1 class="table-title">Recent Deployments</h1>
-              <span class="count-tag" id="deployment-count-badge">0</span>
-            </div>
-            <div class="table-actions">
-              <button class="btn btn-secondary" id="btn-refresh-list" title="Refresh list">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                  <path d="M3 3v5h5"></path>
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                  <path d="M16 21h5v-5"></path>
+    <div class="modal-backdrop" id="deploy-modal" style="display: none">
+      <div class="modal-dialog modal-wizard">
+        <div class="modal-header">
+          <div class="modal-header-nav">
+            <h2 class="modal-title">New Deployment</h2>
+            <div class="wizard-steps-indicator">
+              <div class="step-indicator-pill active" id="pill-step-1">
+                <span class="step-num">1</span>
+                <span class="step-label">Repository</span>
+              </div>
+              <div class="step-arrow">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
-                <span>Refresh</span>
-              </button>
-              <button class="btn btn-primary" id="btn-open-deploy-modal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round">
+              </div>
+              <div class="step-indicator-pill" id="pill-step-2">
+                <span class="step-num">2</span>
+                <span class="step-label">Branch</span>
+              </div>
+              <div class="step-arrow">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </div>
+              <div class="step-indicator-pill" id="pill-step-3">
+                <span class="step-num">3</span>
+                <span class="step-label">Environment</span>
+              </div>
+            </div>
+          </div>
+          <button
+            class="modal-close-btn"
+            id="modal-close-btn"
+            aria-label="Close modal"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="deploy-form">
+          <div class="modal-body wizard-step-panel" id="wizard-step-1">
+            <div class="form-group">
+              <label class="form-label" for="repo-url-input"
+                >GitHub Repository URL</label
+              >
+              <input
+                type="url"
+                id="repo-url-input"
+                class="form-control"
+                placeholder="https://github.com/owner/repository"
+                required
+                pattern="^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(\.git)?$"
+              />
+              <span class="form-hint"
+                >Supports public or accessible repositories. We will inspect
+                branches and configuration automatically.</span
+              >
+            </div>
+
+            <div class="quick-samples">
+              <span class="samples-label">Presets</span>
+              <div class="sample-chips">
+                <button
+                  type="button"
+                  class="chip-btn"
+                  data-url="https://github.com/render-examples/express-hello-world"
+                >
+                  Express.js
+                </button>
+                <button
+                  type="button"
+                  class="chip-btn"
+                  data-url="https://github.com/render-examples/flask-hello-world"
+                >
+                  Flask
+                </button>
+                <button
+                  type="button"
+                  class="chip-btn"
+                  data-url="https://github.com/render-examples/go-gin-web-server"
+                >
+                  Gin (Go)
+                </button>
+                <button
+                  type="button"
+                  class="chip-btn"
+                  data-url="https://github.com/satyamrajput5/deploydock"
+                >
+                  DeployDock
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="form-error-banner"
+              id="step1-error-banner"
+              style="display: none"
+            ></div>
+          </div>
+
+          <div
+            class="modal-body wizard-step-panel"
+            id="wizard-step-2"
+            style="display: none"
+          >
+            <div class="wizard-repo-summary">
+              <span class="repo-summary-label">Repository:</span>
+              <span
+                class="repo-summary-val"
+                id="step2-repo-summary-text"
+              ></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px">
+              <div class="label-with-count">
+                <label class="form-label" for="branch-select"
+                  >Select Branch</label
+                >
+                <span class="count-tag" id="branch-count-tag">0 branches</span>
+              </div>
+              <select id="branch-select" class="form-control">
+                <option value="main">main</option>
+              </select>
+              <span class="form-hint"
+                >Selected branch to clone, build, and deploy.</span
+              >
+            </div>
+
+            <div
+              class="wizard-detected-notice"
+              id="step2-detected-notice"
+              style="display: none"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span id="step2-detected-text"></span>
+            </div>
+
+            <div
+              class="form-error-banner"
+              id="step2-error-banner"
+              style="display: none"
+            ></div>
+          </div>
+
+          <div
+            class="modal-body wizard-step-panel"
+            id="wizard-step-3"
+            style="display: none"
+          >
+            <div class="env-table-header-row">
+              <div class="env-header-meta">
+                <label class="form-label">Environment Variables</label>
+                <span class="form-hint"
+                  >Variables auto-populated from configuration files or added
+                  manually.</span
+                >
+              </div>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                id="btn-add-env-var"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                <span>New Deployment</span>
+                <span>Add Variable</span>
               </button>
             </div>
+
+            <div class="env-vars-container">
+              <table class="env-vars-table" id="env-vars-table">
+                <thead>
+                  <tr>
+                    <th style="width: 38%">Name / Key</th>
+                    <th style="width: 38%">Value</th>
+                    <th style="width: 14%; text-align: center">Secret</th>
+                    <th style="width: 10%; text-align: center"></th>
+                  </tr>
+                </thead>
+                <tbody id="env-vars-tbody"></tbody>
+              </table>
+              <div
+                class="env-table-empty"
+                id="env-table-empty"
+                style="display: none"
+              >
+                <span
+                  >No environment variables yet. Click "Add Variable" to add
+                  custom values.</span
+                >
+              </div>
+            </div>
+
+            <div class="env-security-note">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <span
+                >Variables marked as Secret are encrypted with AES-256 in
+                PostgreSQL and never exposed in cleartext.</span
+              >
+            </div>
+
+            <div
+              class="form-error-banner"
+              id="step3-error-banner"
+              style="display: none"
+            ></div>
           </div>
 
-          <div class="table-responsive">
-            <table class="data-table" id="deployments-table">
+          <div class="modal-footer" id="wizard-footer-step-1">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="modal-cancel-btn"
+            >
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-step-1-next">
+              <span>Next: Select Branch</span>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div
+            class="modal-footer"
+            id="wizard-footer-step-2"
+            style="display: none"
+          >
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="btn-step-2-back"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              <span>Back</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-step-2-next">
+              <span>Next: Environment</span>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div
+            class="modal-footer"
+            id="wizard-footer-step-3"
+            style="display: none"
+          >
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="btn-step-3-back"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              <span>Back</span>
+            </button>
+            <button type="submit" class="btn btn-primary" id="modal-submit-btn">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span class="btn-text">Deploy</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="edit-env-modal" style="display: none">
+      <div class="modal-dialog modal-wizard">
+        <div class="modal-header">
+          <div class="modal-header-nav">
+            <h2 class="modal-title">
+              Environment Variables — <span id="env-modal-target-id">#0</span>
+            </h2>
+            <span class="modal-subtitle"
+              >Configure environment variables. Secrets are encrypted with
+              AES-256 and masked.</span
+            >
+          </div>
+          <button
+            class="modal-close-btn"
+            id="edit-env-close-btn"
+            aria-label="Close modal"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="env-table-header-row">
+            <div class="env-header-meta">
+              <span class="form-hint"
+                >Edit existing variables or add new ones. Changes will apply on
+                the next deployment.</span
+              >
+            </div>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              id="btn-add-edit-env-var"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Variable</span>
+            </button>
+          </div>
+
+          <div class="env-vars-container">
+            <table class="env-vars-table" id="edit-env-vars-table">
               <thead>
                 <tr>
-                  <th style="width: 70px;">ID</th>
-                  <th>Repository URL</th>
-                  <th style="width: 120px;">Status</th>
-                  <th style="width: 90px;">Port</th>
-                  <th style="width: 160px;">URL</th>
-                  <th style="width: 130px;">Created At</th>
-                  <th style="width: 120px; text-align: right;">Actions</th>
+                  <th style="width: 38%">Name / Key</th>
+                  <th style="width: 38%">Value</th>
+                  <th style="width: 14%; text-align: center">Secret</th>
+                  <th style="width: 10%; text-align: center"></th>
                 </tr>
               </thead>
-              <tbody id="deployments-tbody">
-              </tbody>
+              <tbody id="edit-env-vars-tbody"></tbody>
             </table>
-
-            <div class="table-empty-state" id="table-empty-state" style="display: none;">
-              <div class="empty-icon-wrap">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                  <path d="M3 9h18"></path>
-                  <path d="M9 21V9"></path>
-                </svg>
-              </div>
-              <h3>No deployments yet</h3>
-              <p>Submit a GitHub repository to trigger the build pipeline.</p>
-              <button class="btn btn-primary btn-sm" id="btn-empty-deploy">Deploy App</button>
-            </div>
-          </div>
-        </section>
-        <section class="budget-view" id="budget-view" style="display: none;"></section>
-      </main>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="deploy-modal" style="display: none;">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h2 class="modal-title">New Deployment</h2>
-        <button class="modal-close-btn" id="modal-close-btn" aria-label="Close modal">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <form id="deploy-form">
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="repo-url-input">GitHub Repository URL</label>
-            <input type="url" id="repo-url-input" class="form-control" placeholder="https://github.com/owner/repository"
-              required pattern="^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(\.git)?$">
-            <span class="form-hint">Supports repos with a Dockerfile or zero-config Node.js, Python, & Go.</span>
-          </div>
-
-          <div class="quick-samples">
-            <span class="samples-label">Presets</span>
-            <div class="sample-chips">
-              <button type="button" class="chip-btn" data-url="https://github.com/expressjs/express">Express.js</button>
-              <button type="button" class="chip-btn" data-url="https://github.com/pallets/flask">Flask</button>
-              <button type="button" class="chip-btn" data-url="https://github.com/gin-gonic/gin">Gin (Go)</button>
+            <div
+              class="env-table-empty"
+              id="edit-env-table-empty"
+              style="display: none"
+            >
+              <span
+                >No environment variables configured. Click "Add Variable" to
+                add one.</span
+              >
             </div>
           </div>
 
-          <div class="form-error-banner" id="deploy-error-banner" style="display: none;"></div>
+          <div class="env-security-note">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span
+              >Secret variables are masked with bullets (••••••••••••),
+              protected from copying, and stored encrypted with AES-256.</span
+            >
+          </div>
+
+          <div
+            class="form-error-banner"
+            id="edit-env-error-banner"
+            style="display: none"
+          ></div>
         </div>
+
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="modal-submit-btn">
-            <span class="btn-text">Deploy</span>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="edit-env-cancel-btn"
+          >
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="edit-env-save-btn">
+            <span class="btn-text">Save Changes</span>
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="auth-modal" style="display: none;">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h2 class="modal-title">Sign in to DeployDock</h2>
       </div>
-      <form id="auth-form">
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="auth-email">Email</label>
-            <input type="email" id="auth-email" class="form-control" placeholder="you@example.com" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="auth-password">Password</label>
-            <input type="password" id="auth-password" class="form-control" placeholder="At least 8 characters" required>
-          </div>
-          <div class="form-error-banner" id="auth-error-banner" style="display: none;"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="auth-register-btn">Register</button>
-          <button type="submit" class="btn btn-primary" id="auth-login-btn">
-            <span class="btn-text">Login</span>
+    </div>
+
+    <div class="modal-backdrop" id="logs-modal" style="display: none">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            Logs — <span id="logs-target-id">#1</span>
+          </h2>
+          <button
+            class="modal-close-btn"
+            id="logs-close-btn"
+            aria-label="Close logs"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="logs-modal" style="display: none;">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header">
-        <h2 class="modal-title">Logs — <span id="logs-target-id">#1</span></h2>
-        <button class="modal-close-btn" id="logs-close-btn" aria-label="Close logs">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body terminal-body">
-        <div class="terminal-toolbar">
-          <span class="terminal-tag">Output</span>
-          <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">Refresh</button>
+        <div class="modal-body terminal-body">
+          <div class="terminal-toolbar">
+            <span class="terminal-tag">Output</span>
+            <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">
+              Refresh
+            </button>
+          </div>
+          <pre class="terminal-output" id="terminal-output-text">
+Connecting...</pre
+          >
         </div>
-        <pre class="terminal-output" id="terminal-output-text">Connecting...</pre>
       </div>
     </div>
-  </div>
 
-  <script src="/app.js"></script>
-  <script src="/static/budget.js"></script>
-</body>
-
+    <script src="/app.js"></script>
+    <script src="/static/budget.js"></script>
+  </body>
 </html>

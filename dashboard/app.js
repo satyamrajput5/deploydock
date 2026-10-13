@@ -6,7 +6,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const logsModal = document.getElementById('logs-modal');
   const deployForm = document.getElementById('deploy-form');
   const repoInput = document.getElementById('repo-url-input');
-  const errorBanner = document.getElementById('deploy-error-banner');
+  const branchSelect = document.getElementById('branch-select');
+  const branchCountTag = document.getElementById('branch-count-tag');
+  const step2RepoSummaryText = document.getElementById('step2-repo-summary-text');
+  const step2DetectedNotice = document.getElementById('step2-detected-notice');
+  const step2DetectedText = document.getElementById('step2-detected-text');
+  const envVarsTbody = document.getElementById('env-vars-tbody');
+  const envTableEmpty = document.getElementById('env-table-empty');
+  const btnAddEnvVar = document.getElementById('btn-add-env-var');
+  const btnStep1Next = document.getElementById('btn-step-1-next');
+  const btnStep2Back = document.getElementById('btn-step-2-back');
+  const btnStep2Next = document.getElementById('btn-step-2-next');
+  const btnStep3Back = document.getElementById('btn-step-3-back');
+  const step1ErrorBanner = document.getElementById('step1-error-banner');
+  const step2ErrorBanner = document.getElementById('step2-error-banner');
+  const step3ErrorBanner = document.getElementById('step3-error-banner');
+  const editEnvModal = document.getElementById('edit-env-modal');
+  const editEnvCloseBtn = document.getElementById('edit-env-close-btn');
+  const editEnvCancelBtn = document.getElementById('edit-env-cancel-btn');
+  const editEnvSaveBtn = document.getElementById('edit-env-save-btn');
+  const editEnvTbody = document.getElementById('edit-env-vars-tbody');
+  const editEnvTableEmpty = document.getElementById('edit-env-table-empty');
+  const btnAddEditEnvVar = document.getElementById('btn-add-edit-env-var');
+  const editEnvErrorBanner = document.getElementById('edit-env-error-banner');
+  const detailEnvVarsBtn = document.getElementById('detail-env-vars-btn');
+  const envModalTargetId = document.getElementById('env-modal-target-id');
   const terminalText = document.getElementById('terminal-output-text');
   const logsTargetId = document.getElementById('logs-target-id');
   const sidebar = document.getElementById('app-sidebar');
@@ -16,7 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const sunIcon = document.getElementById('theme-sun-icon');
   const moonIcon = document.getElementById('theme-moon-icon');
 
+  const dashboardView = document.getElementById('view-dashboard');
+  const detailView = document.getElementById('view-deployment-detail');
+
   let activeLogsDeploymentId = null;
+  let modalLogsInterval = null;
+  let currentDetailId = null;
+  let detailLogsInterval = null;
+  let detailDataInterval = null;
+  let dashboardStatsInterval = null;
+  let detailStatsInterval = null;
+  let detailAutoscroll = true;
+  let dashboardCpuChart = null;
+  let dashboardRamChart = null;
+  let detailCpuChart = null;
+  let detailRamChart = null;
 
   const authModal = document.getElementById('auth-modal');
   const authForm = document.getElementById('auth-form');
@@ -120,12 +158,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       item.classList.add('active');
       if (window.innerWidth <= 768) {
         sidebar.classList.remove('open');
         backdrop.classList.remove('visible');
+      }
+
+      const href = item.getAttribute('href');
+      if (href === '#dashboard') {
+        window.location.hash = '';
+        history.pushState(null, '', '/');
+        showDashboardView();
       }
     });
   });
@@ -138,6 +183,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('logs-close-btn')?.addEventListener('click', () => {
     logsModal.style.display = 'none';
     activeLogsDeploymentId = null;
+    if (modalLogsInterval) {
+      clearInterval(modalLogsInterval);
+      modalLogsInterval = null;
+    }
   });
 
   document.getElementById('btn-refresh-list')?.addEventListener('click', () => {
@@ -157,10 +206,232 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  let currentDeployStep = 1;
+
+  function setWizardStep(step) {
+    currentDeployStep = step;
+
+    [1, 2, 3].forEach(s => {
+      const pill = document.getElementById(`pill-step-${s}`);
+      const panel = document.getElementById(`wizard-step-${s}`);
+      const footer = document.getElementById(`wizard-footer-step-${s}`);
+
+      if (pill) {
+        pill.classList.remove('active', 'completed');
+        if (s < step) {
+          pill.classList.add('completed');
+        } else if (s === step) {
+          pill.classList.add('active');
+        }
+      }
+
+      if (panel) {
+        panel.style.display = s === step ? 'flex' : 'none';
+      }
+
+      if (footer) {
+        footer.style.display = s === step ? 'flex' : 'none';
+      }
+    });
+
+    clearStepErrors();
+  }
+
+  function clearStepErrors() {
+    if (step1ErrorBanner) step1ErrorBanner.style.display = 'none';
+    if (step2ErrorBanner) step2ErrorBanner.style.display = 'none';
+    if (step3ErrorBanner) step3ErrorBanner.style.display = 'none';
+  }
+
+  function updateEnvTableEmptyState() {
+    if (!envVarsTbody || !envTableEmpty) return;
+    const rows = envVarsTbody.querySelectorAll('tr.env-var-row');
+    if (rows.length === 0) {
+      envTableEmpty.style.display = 'block';
+    } else {
+      envTableEmpty.style.display = 'none';
+    }
+  }
+
+  function addEnvVarRow(key = '', value = '', isSecret = false) {
+    if (!envVarsTbody) return null;
+
+    const tr = document.createElement('tr');
+    tr.className = 'env-var-row';
+
+    const tdKey = document.createElement('td');
+    const inputKey = document.createElement('input');
+    inputKey.type = 'text';
+    inputKey.className = 'env-key-input';
+    inputKey.placeholder = 'KEY_NAME';
+    inputKey.value = key;
+    tdKey.appendChild(inputKey);
+
+    const tdVal = document.createElement('td');
+    const inputVal = document.createElement('input');
+    inputVal.type = 'text';
+    inputVal.className = 'env-val-input';
+    inputVal.placeholder = 'Value';
+    inputVal.value = value;
+    tdVal.appendChild(inputVal);
+
+    const tdSecret = document.createElement('td');
+    tdSecret.className = 'cell-secret';
+    const wrapSecret = document.createElement('div');
+    wrapSecret.className = 'secret-checkbox-wrap';
+    const checkSecret = document.createElement('input');
+    checkSecret.type = 'checkbox';
+    checkSecret.className = 'env-secret-checkbox';
+    checkSecret.checked = !!isSecret;
+    checkSecret.title = 'Encrypt in database';
+    wrapSecret.appendChild(checkSecret);
+    tdSecret.appendChild(wrapSecret);
+
+    inputKey.addEventListener('input', () => {
+      const u = inputKey.value.toUpperCase();
+      const secretKeywords = ['SECRET', 'PASSWORD', 'PASSWD', 'TOKEN', 'KEY', 'AUTH', 'PRIVATE', 'DATABASE', 'DB_', 'CONN', 'CREDENTIAL', 'APIKEY', 'API_KEY', 'CERT', 'JWT', 'ENCRYPT'];
+      const matches = secretKeywords.some(kw => u.includes(kw));
+      if (matches && !checkSecret.dataset.userTouched) {
+        checkSecret.checked = true;
+      }
+    });
+
+    checkSecret.addEventListener('change', () => {
+      checkSecret.dataset.userTouched = 'true';
+    });
+
+    const tdAction = document.createElement('td');
+    tdAction.style.textAlign = 'center';
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove-row';
+    btnDel.title = 'Remove variable';
+    btnDel.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    btnDel.addEventListener('click', () => {
+      tr.remove();
+      updateEnvTableEmptyState();
+    });
+    tdAction.appendChild(btnDel);
+
+    tr.appendChild(tdKey);
+    tr.appendChild(tdVal);
+    tr.appendChild(tdSecret);
+    tr.appendChild(tdAction);
+
+    envVarsTbody.appendChild(tr);
+    updateEnvTableEmptyState();
+    return inputKey;
+  }
+
+  async function handleStep1Next() {
+    clearStepErrors();
+    const url = repoInput.value.trim();
+    const githubRegex = /^https:\/\/github\.com\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+(\.git)?$/;
+    if (!url || !githubRegex.test(url)) {
+      step1ErrorBanner.textContent = 'Please enter a valid GitHub repository URL (e.g. https://github.com/owner/repo)';
+      step1ErrorBanner.style.display = 'block';
+      repoInput.focus();
+      return;
+    }
+
+    const btnNext = document.getElementById('btn-step-1-next');
+    const originalText = btnNext.innerHTML;
+    btnNext.disabled = true;
+    btnNext.innerHTML = `<span>Inspecting repository...</span>`;
+
+    try {
+      const res = await fetch('/repos/inspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: url })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to inspect repository');
+      }
+
+      if (step2RepoSummaryText) {
+        step2RepoSummaryText.textContent = data.repo_url;
+      }
+
+      if (branchSelect) {
+        branchSelect.innerHTML = '';
+        const branches = data.branches && data.branches.length > 0 ? data.branches : [data.default_branch || 'main'];
+        branches.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b;
+          opt.textContent = b;
+          if (b === data.default_branch) {
+            opt.selected = true;
+          }
+          branchSelect.appendChild(opt);
+        });
+      }
+
+      if (branchCountTag) {
+        const count = data.branches ? data.branches.length : 1;
+        branchCountTag.textContent = `${count} ${count === 1 ? 'branch' : 'branches'}`;
+      }
+
+      if (step2DetectedNotice && step2DetectedText) {
+        if (data.detected_env_vars && data.detected_env_vars.length > 0) {
+          step2DetectedText.textContent = `Discovered ${data.detected_env_vars.length} configuration variable(s) from repo files, auto-populated in Step 3.`;
+        } else {
+          step2DetectedText.textContent = `Repository inspected. Ready to configure environment variables in Step 3.`;
+        }
+        step2DetectedNotice.style.display = 'flex';
+      }
+
+      if (envVarsTbody) {
+        envVarsTbody.innerHTML = '';
+        if (data.detected_env_vars && data.detected_env_vars.length > 0) {
+          data.detected_env_vars.forEach(v => {
+            addEnvVarRow(v.key, v.value, v.is_secret);
+          });
+        }
+        updateEnvTableEmptyState();
+      }
+
+      setWizardStep(2);
+    } catch (err) {
+      step1ErrorBanner.textContent = err.message || 'Failed to inspect repository';
+      step1ErrorBanner.style.display = 'block';
+    } finally {
+      btnNext.disabled = false;
+      btnNext.innerHTML = originalText;
+    }
+  }
+
+  btnStep1Next?.addEventListener('click', handleStep1Next);
+
+  btnStep2Back?.addEventListener('click', () => {
+    setWizardStep(1);
+  });
+
+  btnStep2Next?.addEventListener('click', () => {
+    setWizardStep(3);
+  });
+
+  btnStep3Back?.addEventListener('click', () => {
+    setWizardStep(2);
+  });
+
+  btnAddEnvVar?.addEventListener('click', () => {
+    const input = addEnvVarRow('', '', false);
+    if (input) input.focus();
+  });
+
   function openDeployModal() {
     deployModal.style.display = 'flex';
-    errorBanner.style.display = 'none';
+    clearStepErrors();
+    setWizardStep(1);
     repoInput.value = '';
+    if (branchSelect) branchSelect.innerHTML = '<option value="main">main</option>';
+    if (branchCountTag) branchCountTag.textContent = '0 branches';
+    if (envVarsTbody) envVarsTbody.innerHTML = '';
+    updateEnvTableEmptyState();
+    if (step2DetectedNotice) step2DetectedNotice.style.display = 'none';
     repoInput.focus();
   }
 
@@ -170,19 +441,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   deployForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (currentDeployStep === 1) {
+      handleStep1Next();
+      return;
+    }
+    if (currentDeployStep === 2) {
+      setWizardStep(3);
+      return;
+    }
+
+    clearStepErrors();
     const url = repoInput.value.trim();
-    if (!url) return;
+    const branch = branchSelect ? (branchSelect.value.trim() || 'main') : 'main';
+
+    const envVarItems = [];
+    if (envVarsTbody) {
+      const rows = envVarsTbody.querySelectorAll('tr.env-var-row');
+      rows.forEach(tr => {
+        const keyInput = tr.querySelector('.env-key-input');
+        const valInput = tr.querySelector('.env-val-input');
+        const secCheckbox = tr.querySelector('.env-secret-checkbox');
+        if (keyInput) {
+          const k = keyInput.value.trim();
+          if (k !== '') {
+            envVarItems.push({
+              key: k,
+              value: valInput ? valInput.value : '',
+              is_secret: secCheckbox ? secCheckbox.checked : false
+            });
+          }
+        }
+      });
+    }
 
     const submitBtn = document.getElementById('modal-submit-btn');
+    const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Deploying...</span>';
-    errorBanner.style.display = 'none';
 
     try {
       const res = await authFetch('/deployments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repo_url: url })
+        body: JSON.stringify({
+          repo_url: url,
+          branch: branch,
+          env_var_items: envVarItems
+        })
       });
 
       const data = await res.json();
@@ -192,12 +497,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
       closeDeployModal();
       await fetchDeployments();
+
+      const createdId = data.deployment?.id;
+      if (createdId) {
+        navigateToDeployment(createdId);
+      }
     } catch (err) {
-      errorBanner.textContent = err.message;
-      errorBanner.style.display = 'block';
+      step3ErrorBanner.textContent = err.message || 'Failed to submit deployment';
+      step3ErrorBanner.style.display = 'block';
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span class="btn-text">Deploy</span>';
+      submitBtn.innerHTML = originalText;
     }
   });
 
@@ -228,27 +538,37 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusClass = `status-${item.status || 'pending'}`;
       const portDisplay = item.port ? `:${item.port}` : '<span style="color: var(--fg-faint);">—</span>';
       const liveUrl = item.port 
-        ? `<a href="http://localhost:${item.port}" target="_blank" rel="noopener noreferrer">http://localhost:${item.port}</a>` 
+        ? `<a href="http://localhost:${item.port}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">http://localhost:${item.port}</a>` 
         : '<span style="color: var(--fg-faint);">—</span>';
 
       const created = item.created_at ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+      const branchName = item.branch || 'main';
+      const commitDisplay = item.commit_sha ? `<span class="commit-tag" title="Commit">${item.commit_sha.substring(0, 7)}</span>` : '';
+      const versionText = item.current_build_id ? `v${item.current_build_id}` : (item.build_number ? `v${item.build_number}` : 'v1');
 
       return `
-        <tr data-id="${item.id}">
+        <tr data-id="${item.id}" class="clickable-row" onclick="window.onRowClick(event, ${item.id})">
           <td class="cell-id">#${item.id}</td>
           <td>
-            <a class="cell-repo" href="${item.repo_url}" target="_blank" rel="noopener noreferrer" title="${item.repo_url}">
-              ${item.repo_url.replace('https://github.com/', '')}
-            </a>
+            <div class="repo-cell-wrap">
+              <a class="cell-repo" href="${item.repo_url}" target="_blank" rel="noopener noreferrer" title="${item.repo_url}" onclick="event.stopPropagation()">
+                ${item.repo_url.replace('https://github.com/', '')}
+              </a>
+              <span class="branch-tag" title="Branch">${branchName}</span>
+              ${commitDisplay}
+            </div>
           </td>
+          <td><span class="version-tag">${versionText}</span></td>
           <td>
             <span class="status-badge ${statusClass}">${item.status}</span>
+            ${item.docker_status ? `<span class="docker-status-sub" title="Docker: ${item.docker_status}">${item.docker_status}</span>` : ''}
           </td>
           <td class="cell-port">${portDisplay}</td>
           <td class="cell-url">${liveUrl}</td>
           <td style="color: var(--fg-muted); font-size: 0.8rem; font-family: var(--font-mono);">${created}</td>
           <td style="text-align: right;">
-            <div style="display: inline-flex; gap: 4px;">
+            <div style="display: inline-flex; gap: 4px;" onclick="event.stopPropagation()">
+              <button class="btn btn-secondary btn-sm" onclick="window.redeploy(${item.id})" title="Trigger build">Redeploy</button>
               <button class="btn btn-secondary btn-sm" onclick="window.viewLogs(${item.id})">Logs</button>
               <button class="btn btn-danger btn-sm" onclick="window.deleteDeployment(${item.id})">Delete</button>
             </div>
@@ -258,12 +578,506 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
+  window.onRowClick = function(event, id) {
+    if (event.target.closest('button') || event.target.closest('a')) return;
+    navigateToDeployment(id);
+  };
+
+  function navigateToDeployment(id) {
+    window.location.hash = `#/deployment/${id}`;
+  }
+
+  function showDashboardView() {
+    currentDetailId = null;
+    if (detailLogsInterval) {
+      clearInterval(detailLogsInterval);
+      detailLogsInterval = null;
+    }
+    if (detailDataInterval) {
+      clearInterval(detailDataInterval);
+      detailDataInterval = null;
+    }
+    if (detailStatsInterval) {
+      clearInterval(detailStatsInterval);
+      detailStatsInterval = null;
+    }
+    detailView.style.display = 'none';
+    dashboardView.style.display = 'flex';
+    resizeAllCanvases();
+
+    if (!dashboardStatsInterval) {
+      fetchDashboardStats();
+      dashboardStatsInterval = setInterval(fetchDashboardStats, 3000);
+    }
+  }
+
+  async function showDeploymentDetail(id) {
+    currentDetailId = id;
+    if (dashboardStatsInterval) {
+      clearInterval(dashboardStatsInterval);
+      dashboardStatsInterval = null;
+    }
+    if (detailStatsInterval) {
+      clearInterval(detailStatsInterval);
+      detailStatsInterval = null;
+    }
+
+    dashboardView.style.display = 'none';
+    detailView.style.display = 'flex';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (detailCpuChart) detailCpuChart.reset();
+    if (detailRamChart) detailRamChart.reset();
+
+    await loadDeploymentDetailData(id);
+    resizeAllCanvases();
+
+    fetchDetailStats(id);
+    detailStatsInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        fetchDetailStats(id);
+      }
+    }, 3000);
+
+    if (detailLogsInterval) clearInterval(detailLogsInterval);
+    fetchDetailLogs(id);
+    detailLogsInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        fetchDetailLogs(id);
+      }
+    }, 1500);
+
+    if (detailDataInterval) clearInterval(detailDataInterval);
+    detailDataInterval = setInterval(() => {
+      if (currentDetailId === id) {
+        loadDeploymentDetailData(id);
+      }
+    }, 2000);
+  }
+
+  function handleRouting() {
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+
+    let match = hash.match(/#\/?deployment\/(\d+)/);
+    if (!match) {
+      match = path.match(/\/deployment\/(\d+)/);
+    }
+
+    if (match && match[1]) {
+      showDeploymentDetail(parseInt(match[1], 10));
+    } else {
+      showDashboardView();
+    }
+  }
+
+  window.addEventListener('hashchange', handleRouting);
+  window.addEventListener('popstate', handleRouting);
+
+  document.getElementById('btn-back-to-dashboard')?.addEventListener('click', () => {
+    window.location.hash = '';
+    history.pushState(null, '', '/');
+    showDashboardView();
+  });
+
+  async function loadDeploymentDetailData(id) {
+    try {
+      const res = await fetch(`/deployments/${id}`);
+      if (!res.ok) throw new Error('Deployment not found');
+      const data = await res.json();
+
+      document.getElementById('detail-id-tag').textContent = `#${data.id}`;
+      const repoName = data.repo_url.replace('https://github.com/', '');
+      document.getElementById('detail-repo-name').textContent = repoName;
+      document.getElementById('detail-branch-tag').textContent = data.branch || 'main';
+      const versionText = data.current_build_id ? `v${data.current_build_id}` : (data.build_number ? `v${data.build_number}` : 'v1');
+      document.getElementById('detail-version-tag').textContent = versionText;
+
+      const statusBadge = document.getElementById('detail-status-badge');
+      statusBadge.className = `status-badge status-${data.status || 'pending'}`;
+      statusBadge.textContent = data.status || 'pending';
+
+      document.getElementById('detail-port-val').textContent = data.port ? `:${data.port}` : '—';
+      document.getElementById('detail-container-val').textContent = data.container_id ? data.container_id.substring(0, 12) : '—';
+      document.getElementById('detail-commit-val').textContent = data.commit_sha ? data.commit_sha.substring(0, 7) : '—';
+      const ghLink = document.getElementById('detail-github-link');
+      ghLink.href = data.repo_url;
+      ghLink.textContent = data.repo_url;
+      document.getElementById('detail-created-val').textContent = data.created_at ? new Date(data.created_at).toLocaleString() : '—';
+      const dockerVal = document.getElementById('detail-docker-val');
+      if (dockerVal) {
+        dockerVal.textContent = data.docker_status || (data.status === 'running' ? 'Active' : '—');
+      }
+
+      const visitBtn = document.getElementById('detail-visit-btn');
+      if (data.port) {
+        visitBtn.href = `http://localhost:${data.port}`;
+        visitBtn.style.display = 'inline-flex';
+      } else {
+        visitBtn.style.display = 'none';
+      }
+
+      const envBtn = document.getElementById('detail-env-vars-btn');
+      if (envBtn) {
+        envBtn.onclick = () => {
+          openEditEnvModal(data.id);
+        };
+      }
+
+      const redeployBtn = document.getElementById('detail-redeploy-btn');
+      if (redeployBtn) {
+        redeployBtn.onclick = async () => {
+          await window.redeploy(data.id);
+          loadDeploymentDetailData(data.id);
+        };
+      }
+
+      const deleteBtn = document.getElementById('detail-delete-btn');
+      if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+          await window.deleteDeployment(data.id);
+          window.location.hash = '';
+          history.pushState(null, '', '/');
+          showDashboardView();
+        };
+      }
+
+      loadBuildsTable(id);
+    } catch (err) {
+      console.error('Failed loading detail:', err);
+    }
+  }
+
+  function addEditEnvVarRow(key = '', value = '', isSecret = false, isExistingSecret = false) {
+    if (!editEnvTbody) return null;
+
+    const tr = document.createElement('tr');
+    tr.className = 'env-var-row';
+
+    const tdKey = document.createElement('td');
+    const inputKey = document.createElement('input');
+    inputKey.type = 'text';
+    inputKey.className = 'env-key-input';
+    inputKey.placeholder = 'KEY_NAME';
+    inputKey.value = key;
+    tdKey.appendChild(inputKey);
+
+    const tdVal = document.createElement('td');
+    const inputVal = document.createElement('input');
+    inputVal.className = 'env-val-input';
+    inputVal.placeholder = 'Value';
+
+    if (isSecret) {
+      inputVal.type = 'password';
+      inputVal.value = value || '••••••••••••';
+      if (isExistingSecret) {
+        inputVal.classList.add('is-secret-masked');
+        inputVal.dataset.existingSecret = 'true';
+      }
+    } else {
+      inputVal.type = 'text';
+      inputVal.value = value;
+    }
+
+    inputVal.addEventListener('copy', (e) => {
+      if (checkSecret.checked) {
+        e.preventDefault();
+      }
+    });
+    inputVal.addEventListener('cut', (e) => {
+      if (checkSecret.checked) {
+        e.preventDefault();
+      }
+    });
+
+    inputVal.addEventListener('focus', () => {
+      if (inputVal.dataset.existingSecret === 'true') {
+        inputVal.value = '';
+        inputVal.classList.remove('is-secret-masked');
+        delete inputVal.dataset.existingSecret;
+      }
+    });
+
+    tdVal.appendChild(inputVal);
+
+    const tdSecret = document.createElement('td');
+    tdSecret.className = 'cell-secret';
+    const wrapSecret = document.createElement('div');
+    wrapSecret.className = 'secret-checkbox-wrap';
+    const checkSecret = document.createElement('input');
+    checkSecret.type = 'checkbox';
+    checkSecret.className = 'env-secret-checkbox';
+    checkSecret.checked = !!isSecret;
+    checkSecret.title = 'Encrypt in database';
+    wrapSecret.appendChild(checkSecret);
+    tdSecret.appendChild(wrapSecret);
+
+    checkSecret.addEventListener('change', () => {
+      if (checkSecret.checked) {
+        inputVal.type = 'password';
+      } else {
+        inputVal.type = 'text';
+        if (inputVal.dataset.existingSecret === 'true') {
+          inputVal.value = '';
+          inputVal.classList.remove('is-secret-masked');
+          delete inputVal.dataset.existingSecret;
+        }
+      }
+    });
+
+    const tdAction = document.createElement('td');
+    tdAction.style.textAlign = 'center';
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove-row';
+    btnDel.title = 'Remove variable';
+    btnDel.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    btnDel.addEventListener('click', () => {
+      tr.remove();
+      updateEditEnvTableEmptyState();
+    });
+    tdAction.appendChild(btnDel);
+
+    tr.appendChild(tdKey);
+    tr.appendChild(tdVal);
+    tr.appendChild(tdSecret);
+    tr.appendChild(tdAction);
+
+    editEnvTbody.appendChild(tr);
+    updateEditEnvTableEmptyState();
+    return inputKey;
+  }
+
+  function updateEditEnvTableEmptyState() {
+    if (!editEnvTbody || !editEnvTableEmpty) return;
+    const rows = editEnvTbody.querySelectorAll('tr.env-var-row');
+    editEnvTableEmpty.style.display = rows.length === 0 ? 'block' : 'none';
+  }
+
+  async function openEditEnvModal(deploymentId) {
+    if (!editEnvModal) return;
+    editEnvModal.style.display = 'flex';
+    if (envModalTargetId) envModalTargetId.textContent = `#${deploymentId}`;
+    if (editEnvErrorBanner) editEnvErrorBanner.style.display = 'none';
+    if (editEnvTbody) editEnvTbody.innerHTML = '';
+    updateEditEnvTableEmptyState();
+
+    try {
+      const res = await fetch(`/deployments/${deploymentId}/env-vars`);
+      if (!res.ok) throw new Error('Failed to load environment variables');
+      const data = await res.json();
+      const list = data.env_vars || [];
+
+      if (editEnvTbody) {
+        editEnvTbody.innerHTML = '';
+        list.forEach(item => {
+          addEditEnvVarRow(item.key, item.value, item.is_secret, item.is_secret);
+        });
+        updateEditEnvTableEmptyState();
+      }
+    } catch (err) {
+      if (editEnvErrorBanner) {
+        editEnvErrorBanner.textContent = err.message || 'Failed to load variables';
+        editEnvErrorBanner.style.display = 'block';
+      }
+    }
+  }
+
+  function closeEditEnvModal() {
+    if (editEnvModal) editEnvModal.style.display = 'none';
+  }
+
+  editEnvCloseBtn?.addEventListener('click', closeEditEnvModal);
+  editEnvCancelBtn?.addEventListener('click', closeEditEnvModal);
+
+  btnAddEditEnvVar?.addEventListener('click', () => {
+    const input = addEditEnvVarRow('', '', false, false);
+    if (input) input.focus();
+  });
+
+  editEnvSaveBtn?.addEventListener('click', async () => {
+    if (!currentDetailId) return;
+    if (editEnvErrorBanner) editEnvErrorBanner.style.display = 'none';
+
+    const envVarItems = [];
+    if (editEnvTbody) {
+      const rows = editEnvTbody.querySelectorAll('tr.env-var-row');
+      rows.forEach(tr => {
+        const keyInput = tr.querySelector('.env-key-input');
+        const valInput = tr.querySelector('.env-val-input');
+        const secCheckbox = tr.querySelector('.env-secret-checkbox');
+        if (keyInput) {
+          const k = keyInput.value.trim();
+          if (k !== '') {
+            let val = valInput ? valInput.value : '';
+            if (valInput && valInput.dataset.existingSecret === 'true') {
+              val = '••••••••••••';
+            }
+            envVarItems.push({
+              key: k,
+              value: val,
+              is_secret: secCheckbox ? secCheckbox.checked : false
+            });
+          }
+        }
+      });
+    }
+
+    const originalText = editEnvSaveBtn.innerHTML;
+    editEnvSaveBtn.disabled = true;
+    editEnvSaveBtn.innerHTML = '<span>Saving...</span>';
+
+    try {
+      const res = await fetch(`/deployments/${currentDetailId}/env-vars`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ env_var_items: envVarItems })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save environment variables');
+      }
+
+      closeEditEnvModal();
+    } catch (err) {
+      if (editEnvErrorBanner) {
+        editEnvErrorBanner.textContent = err.message || 'Failed to save environment variables';
+        editEnvErrorBanner.style.display = 'block';
+      }
+    } finally {
+      editEnvSaveBtn.disabled = false;
+      editEnvSaveBtn.innerHTML = originalText;
+    }
+  });
+
+  async function loadBuildsTable(id) {
+    try {
+      const res = await fetch(`/deployments/${id}/builds`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const builds = data.builds || [];
+      document.getElementById('detail-builds-count').textContent = builds.length;
+
+      const tbody = document.getElementById('detail-builds-tbody');
+      if (builds.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--fg-faint); padding:20px;">No builds recorded yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = builds.map(b => {
+        const commitTag = b.commit_sha ? `<span class="commit-tag">${b.commit_sha.substring(0, 7)}</span>` : '<span style="color:var(--fg-faint)">—</span>';
+        const errText = b.error_message || 'OK';
+        const isErr = b.status === 'failed' || !!b.error_message;
+
+        return `
+          <tr>
+            <td><span class="version-tag">#${b.id}</span></td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem;">${b.trigger_type}</td>
+            <td>${commitTag}</td>
+            <td><span class="status-badge status-${b.status}">${b.status}</span></td>
+            <td style="color:${isErr ? 'var(--danger)' : 'var(--fg-muted)'}; font-size:0.75rem; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${errText}">
+              ${errText}
+            </td>
+            <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--fg-faint);">${b.created_at ? new Date(b.created_at).toLocaleTimeString() : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      console.error('Failed loading builds:', err);
+    }
+  }
+
+  async function fetchDetailLogs(id) {
+    const textEl = document.getElementById('detail-terminal-text');
+    const countEl = document.getElementById('detail-log-count');
+    const container = document.getElementById('detail-terminal-container');
+
+    try {
+      const res = await fetch(`/deployments/${id}/logs`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch logs');
+
+      const logs = data.logs || [];
+      if (countEl) countEl.textContent = `${logs.length} lines`;
+
+      if (logs.length === 0) {
+        textEl.textContent = `Deployment #${id} queued.\nAwaiting build logs...`;
+        return;
+      }
+
+      const formatted = logs.map(l => {
+        const time = l.created_at ? new Date(l.created_at).toLocaleTimeString() : '';
+        return `[${time}] ${l.message}`;
+      }).join('\n');
+
+      if (textEl.textContent !== formatted) {
+        textEl.textContent = formatted;
+        if (detailAutoscroll && container) {
+          requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+          });
+        }
+      } else if (detailAutoscroll && container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    } catch (err) {
+      textEl.textContent = `Error loading logs: ${err.message}`;
+    }
+  }
+
+  document.getElementById('detail-scroll-logs-btn')?.addEventListener('click', (e) => {
+    detailAutoscroll = !detailAutoscroll;
+    e.target.textContent = `Auto-scroll: ${detailAutoscroll ? 'ON' : 'OFF'}`;
+    if (detailAutoscroll) {
+      const container = document.getElementById('detail-terminal-container');
+      if (container) {
+        requestAnimationFrame(() => {
+          container.scrollTop = container.scrollHeight;
+        });
+      }
+    }
+  });
+
+  document.getElementById('detail-clear-logs-btn')?.addEventListener('click', () => {
+    const textEl = document.getElementById('detail-terminal-text');
+    if (textEl) textEl.textContent = '';
+    const countEl = document.getElementById('detail-log-count');
+    if (countEl) countEl.textContent = '0 lines';
+  });
+
+  document.getElementById('detail-refresh-logs-btn')?.addEventListener('click', () => {
+    if (currentDetailId) fetchDetailLogs(currentDetailId);
+  });
+
+  window.redeploy = async function(id) {
+    try {
+      const res = await fetch(`/deployments/${id}/redeploy`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to trigger redeploy');
+      await fetchDeployments();
+      if (currentDetailId === id) {
+        loadDeploymentDetailData(id);
+      }
+    } catch (err) {
+      alert(`Error triggering redeploy: ${err.message}`);
+    }
+  };
+
   window.viewLogs = async function(id) {
     activeLogsDeploymentId = id;
     logsTargetId.textContent = `#${id}`;
-    terminalText.textContent = 'Loading...';
+    terminalText.textContent = 'Loading live logs...';
     logsModal.style.display = 'flex';
     await fetchLogs(id);
+
+    if (modalLogsInterval) clearInterval(modalLogsInterval);
+    modalLogsInterval = setInterval(() => {
+      if (activeLogsDeploymentId === id && logsModal.style.display !== 'none') {
+        fetchLogs(id);
+      }
+    }, 1500);
   };
 
   async function fetchLogs(id) {
@@ -277,7 +1091,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      terminalText.textContent = data.logs.map(l => `[${new Date(l.created_at).toLocaleTimeString()}] ${l.message}`).join('\n');
+      const formatted = data.logs.map(l => {
+        const time = l.created_at ? new Date(l.created_at).toLocaleTimeString() : '';
+        return `[${time}] ${l.message}`;
+      }).join('\n');
+
+      if (terminalText.textContent !== formatted) {
+        terminalText.textContent = formatted;
+        requestAnimationFrame(() => {
+          terminalText.scrollTop = terminalText.scrollHeight;
+        });
+      }
     } catch (err) {
       terminalText.textContent = `Error loading logs: ${err.message}`;
     }
@@ -304,23 +1128,64 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', resizeAllCanvases);
 
   function initCharts() {
-    setupCanvasChart('cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', (val) => {
-      const el = document.getElementById('cpu-current-pct');
-      if (el) el.textContent = `${val.toFixed(1)}%`;
-    });
-
-    setupCanvasChart('ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', (val) => {
-      const el = document.getElementById('ram-current-val');
-      if (el) el.textContent = `${Math.round(val * 16)} MB`;
-    });
+    dashboardCpuChart = setupCanvasChart('cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', { isRam: false });
+    dashboardRamChart = setupCanvasChart('ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', { isRam: true });
+    detailCpuChart = setupCanvasChart('detail-cpu-chart-canvas', 'var(--chart-cpu)', 'rgba(6, 182, 212, 0.08)', { isRam: false });
+    detailRamChart = setupCanvasChart('detail-ram-chart-canvas', 'var(--chart-ram)', 'rgba(139, 92, 246, 0.08)', { isRam: true });
   }
 
-  function setupCanvasChart(canvasId, strokeColor, fillColor, onUpdate) {
+  async function fetchDashboardStats() {
+    try {
+      const res = await fetch('/stats');
+      if (!res.ok) return;
+      const data = await res.json();
+      const cpuVal = data.avg_cpu_pct || 0;
+      const memVal = data.avg_mem_mb || 0;
+
+      if (dashboardCpuChart) dashboardCpuChart.pushPoint(cpuVal);
+      if (dashboardRamChart) dashboardRamChart.pushPoint(memVal);
+
+      const cpuEl = document.getElementById('cpu-current-pct');
+      if (cpuEl) cpuEl.textContent = `${cpuVal.toFixed(1)}%`;
+
+      const ramEl = document.getElementById('ram-current-val');
+      if (ramEl) ramEl.textContent = `${Math.round(memVal)} MB`;
+    } catch (err) {
+      console.warn('Failed fetching dashboard stats:', err);
+    }
+  }
+
+  async function fetchDetailStats(id) {
+    if (!id) return;
+    try {
+      const res = await fetch(`/deployments/${id}/stats`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const cpuVal = data.cpu_pct || 0;
+      const memVal = data.mem_mb || 0;
+
+      if (detailCpuChart) detailCpuChart.pushPoint(cpuVal);
+      if (detailRamChart) detailRamChart.pushPoint(memVal);
+
+      const cpuEl = document.getElementById('detail-cpu-pct');
+      if (cpuEl) cpuEl.textContent = `${cpuVal.toFixed(1)}%`;
+
+      const ramEl = document.getElementById('detail-ram-val');
+      if (ramEl) ramEl.textContent = `${Math.round(memVal)} MB`;
+    } catch (err) {
+      console.warn('Failed fetching detail stats:', err);
+    }
+  }
+
+  function setupCanvasChart(canvasId, strokeColor, fillColor, options = {}) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas) return null;
     const ctx = canvas.getContext('2d');
 
-    const points = Array.from({ length: 24 }, () => 12 + Math.random() * 18);
+    const pointCount = 24;
+    const points = Array(pointCount).fill(0);
+    const isRam = !!options.isRam;
+    let maxScale = isRam ? 256 : 100;
 
     function syncDimensions() {
       const rect = canvas.parentElement.getBoundingClientRect();
@@ -349,13 +1214,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      points.shift();
-      const last = points[points.length - 1];
-      const next = Math.max(8, Math.min(65, last + (Math.random() * 8 - 4)));
-      points.push(next);
-
-      if (onUpdate) onUpdate(next);
-
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       const actualStroke = strokeColor.startsWith('var') 
         ? (strokeColor.includes('cpu') ? (isLight ? '#0891b2' : '#06b6d4') : (isLight ? '#7c3aed' : '#8b5cf6')) 
@@ -369,7 +1227,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const rightPad = 8;
       const topY = 7;
       const bottomY = h - 7;
-      const ticks = [0, 50, 100];
+
+      let currentMax = maxScale;
+      for (let i = 0; i < points.length; i++) {
+        if (points[i] > currentMax) currentMax = points[i];
+      }
+      if (isRam) {
+        if (currentMax > 256) currentMax = Math.ceil(currentMax / 128) * 128;
+        else currentMax = 256;
+      } else {
+        currentMax = Math.max(100, Math.ceil(currentMax / 50) * 50);
+      }
+
+      const ticks = [0, Math.round(currentMax / 2), Math.round(currentMax)];
 
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
@@ -379,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const axisColor = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)';
 
       ticks.forEach(val => {
-        const tickY = bottomY - (val / 100) * (bottomY - topY);
+        const tickY = bottomY - (val / currentMax) * (bottomY - topY);
 
         ctx.fillStyle = labelColor;
         ctx.fillText(val.toString(), axisX - 5, tickY);
@@ -408,7 +1278,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.moveTo(axisX, bottomY);
       points.forEach((p, i) => {
         const x = axisX + i * step;
-        const y = bottomY - (p / 100) * (bottomY - topY);
+        const clampedP = Math.max(0, Math.min(currentMax, p));
+        const y = bottomY - (clampedP / currentMax) * (bottomY - topY);
         ctx.lineTo(x, y);
       });
       ctx.lineTo(axisX + plotW, bottomY);
@@ -419,7 +1290,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.beginPath();
       points.forEach((p, i) => {
         const x = axisX + i * step;
-        const y = bottomY - (p / 100) * (bottomY - topY);
+        const clampedP = Math.max(0, Math.min(currentMax, p));
+        const y = bottomY - (clampedP / currentMax) * (bottomY - topY);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -427,8 +1299,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      const lastVal = points[points.length - 1];
+      const clampedLast = Math.max(0, Math.min(currentMax, lastVal));
       const lastX = axisX + (points.length - 1) * step;
-      const lastY = bottomY - (next / 100) * (bottomY - topY);
+      const lastY = bottomY - (clampedLast / currentMax) * (bottomY - topY);
 
       ctx.beginPath();
       ctx.arc(lastX, lastY, 2.75, 0, Math.PI * 2);
@@ -445,11 +1319,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     draw();
-    setInterval(draw, 2500);
+
+    return {
+      pushPoint: function(val) {
+        points.shift();
+        points.push(val);
+        draw();
+      },
+      reset: function() {
+        points.fill(0);
+        draw();
+      },
+      redraw: draw
+    };
   }
 
   initTheme();
   fetchDeployments();
   initCharts();
+  fetchDashboardStats();
+  dashboardStatsInterval = setInterval(fetchDashboardStats, 3000);
+  handleRouting();
   setInterval(fetchDeployments, 5000);
 });
