@@ -33,6 +33,11 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
+	r.StaticFile("/", "./dashboard/index.html")
+	r.StaticFile("/style.css", "./dashboard/style.css")
+	r.StaticFile("/app.js", "./dashboard/app.js")
+	r.Static("/static", "./dashboard")
+
 	r.GET("/health", healthH.HealthCheck)
 
 	authRoutes := r.Group("/auth")
