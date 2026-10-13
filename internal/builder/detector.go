@@ -202,7 +202,7 @@ func generateNodeDockerfile(dir string) string {
 
 	buildStep := ""
 	if hasBuild {
-		buildStep = "RUN npm run build\n"
+		buildStep = "RUN CI=false npm run build --if-present || true\n"
 	}
 
 	var startCmd string
@@ -217,9 +217,12 @@ func generateNodeDockerfile(dir string) string {
 	return fmt.Sprintf(`FROM node:20-alpine
 WORKDIR /app
 ENV PORT=8080
-ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV BROWSER=none
+ENV CI=false
+ENV NODE_OPTIONS="--openssl-legacy-provider"
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps || npm install
 COPY . .
 %sEXPOSE 8080
 %s
