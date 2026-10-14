@@ -46,6 +46,7 @@ func main() {
 	r.StaticFile("/", "./dashboard/index.html")
 	r.StaticFile("/style.css", "./dashboard/style.css")
 	r.StaticFile("/app.js", "./dashboard/app.js")
+	r.StaticFile("/budget.js", "./dashboard/budget.js")
 	r.Static("/static", "./dashboard")
 	r.GET("/deployment/:id", func(c *gin.Context) {
 		c.File("./dashboard/index.html")

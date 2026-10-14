@@ -548,6 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
       detailStatsInterval = null;
     }
     detailView.style.display = 'none';
+    const budgetView = document.getElementById('budget-view');
+    if (budgetView) budgetView.style.display = 'none';
     dashboardView.style.display = 'block';
     resizeAllCanvases();
 
@@ -569,6 +571,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     dashboardView.style.display = 'none';
+    const budgetView = document.getElementById('budget-view');
+    if (budgetView) budgetView.style.display = 'none';
     detailView.style.display = 'block';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -605,6 +609,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleRouting() {
     const hash = window.location.hash;
     const path = window.location.pathname;
+
+    if (hash === '#budget' || hash === '#/budget') {
+      return;
+    }
 
     let match = hash.match(/#\/?deployment\/(\d+)/);
     if (!match) {
